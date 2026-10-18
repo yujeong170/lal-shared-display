@@ -955,8 +955,12 @@ function shapePage() {
     </p>
 
     <div class="grid-two">
-      ${SHAPES.map(shape => `
-        <button
+${SHAPES.filter(shape =>
+  FURNITURE.some(item =>
+    item.room === state.room &&
+    item.shape === shape.id
+  )
+).map(shape => `ㄴ        <button
           class="option"
           data-shape="${shape.id}"
           ${shape.cost > availablePieces()
