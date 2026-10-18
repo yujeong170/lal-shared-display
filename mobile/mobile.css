@@ -720,3 +720,9 @@ button {
   object-fit: contain;
   image-rendering: pixelated;
 }
+
+/* Furniture silhouettes before placement */
+
+.furniture-preview img {
+  filter: brightness(0);
+}

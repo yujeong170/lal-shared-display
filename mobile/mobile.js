@@ -97,8 +97,8 @@ const ROOM_ASSET_FOLDERS = {
   bathroom: "bathroom",
   bedroom: "bedroom",
   kitchen: "kitchen",
-  living1: "livingroom-1",
-  living2: "livingroom-2"
+  living1: "living-room-1",
+  living2: "living-room-2"
 };
 
 function furnitureImage(item) {
@@ -640,15 +640,7 @@ function homePage() {
             `}
         </div>
       `
-      : `
-        <div class="card">
-          <h3>How It Works</h3>
-          <p class="small">
-            Study → Earn Pieces → Contribute Furniture
-            → Collect Points → Redeem Rewards.
-          </p>
-        </div>
-      `}
+      : ""}
 
     <div class="timer-settings">
       <div class="between">
@@ -1237,9 +1229,6 @@ function placementPage() {
             ).join("")}
           </div>
 
-          <p class="small center">
-            ${room.cols} × ${room.rows} Grid
-          </p>
         </div>
       </div>
 
