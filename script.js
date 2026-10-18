@@ -1,6 +1,5 @@
 
 const roomGrid = document.getElementById("roomGrid");
-const furnitureMenu = document.getElementById("furnitureMenu");
 const screen = document.querySelector(".screen");
 
 const cellSize = 180;
@@ -216,36 +215,6 @@ const occupied = new Set();
 const cells = [];
 let selectedFurniture = furnitureItems[0];
 
-// Menu heading
-const heading = document.createElement("h3");
-heading.textContent = roomId.replace(/-/g, " ");
-furnitureMenu.appendChild(heading);
-
-// Create furniture buttons
-furnitureItems.forEach((item) => {
-  const button = document.createElement("button");
-
-  button.textContent =
-    `${item.name} (${item.w}×${item.h})`;
-
-  button.addEventListener("click", () => {
-    selectedFurniture = item;
-
-    furnitureMenu
-      .querySelectorAll("button")
-      .forEach(btn => btn.classList.remove("selected"));
-
-    button.classList.add("selected");
-    clearPreview();
-  });
-
-  if (item === selectedFurniture) {
-    button.classList.add("selected");
-  }
-
-  furnitureMenu.appendChild(button);
-});
-
 // Create grid cells
 for (let i = 0; i < columns * rows; i++) {
   const cell = document.createElement("div");
@@ -353,18 +322,6 @@ function placeFurniture(index) {
   clearPreview();
 }
 
-// Grid interactions
-cells.forEach((cell, index) => {
-  cell.addEventListener("mouseenter", () => {
-    showPreview(index);
-  });
-
-  cell.addEventListener("click", () => {
-    placeFurniture(index);
-  });
-});
-
-roomGrid.addEventListener("mouseleave", clearPreview);
 
 // ========================================
 // SUPABASE — SHARED FURNITURE DISPLAY

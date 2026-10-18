@@ -113,3 +113,17 @@ body {
   text-transform: capitalize;
   font-size: 16px;
 }
+
+/* Shared Display: view-only mode */
+
+.furniture-menu {
+  display: none;
+}
+
+.room-grid .cell {
+  cursor: default;
+}
+
+.room-grid .cell:hover {
+  background-color: transparent;
+}
