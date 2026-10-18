@@ -210,7 +210,10 @@ p {
   left: 50%;
   transform: translateX(-50%);
 
-  width: min(100%, 390px);
+  width: 100%;
+  max-width: 390px;
+  box-sizing: border-box;
+
   height: 72px;
 
   display: flex;
@@ -218,7 +221,7 @@ p {
   align-items: center;
 
   background: var(--olive);
-  border-radius: 0 0 24px 24px;
+  border-radius: 0;
   margin: 0;
   padding: 0 16px env(safe-area-inset-bottom);
   z-index: 100;
@@ -725,4 +728,68 @@ button {
 
 .furniture-preview img {
   filter: brightness(0);
+}
+
+/* Rewards screen */
+
+.rewards-title {
+  color: #936758;
+  font-size: 29px;
+  margin: 8px 0 20px;
+}
+
+.rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reward-item {
+  width: 100%;
+  min-height: 94px;
+  padding: 18px 28px;
+  border-radius: 999px;
+  border: 4px solid #a2a373;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.reward-item.filled {
+  background: #a2a373;
+  color: #fffaf0;
+}
+
+.reward-item.outlined {
+  background: transparent;
+  color: #a2a373;
+}
+
+.reward-name {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.reward-cost {
+  min-width: 100px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  text-align: center;
+  background: #fffaf0;
+  color: #936758;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.reward-item.outlined .reward-cost {
+  background: #a2a373;
+  color: #fffaf0;
+}
+
+.reward-item:disabled {
+  opacity: 1;
+  cursor: not-allowed;
 }

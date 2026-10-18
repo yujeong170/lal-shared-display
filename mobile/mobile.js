@@ -524,11 +524,11 @@ function bottomNav() {
         <span style="font-size:22px">⌂</span>
         <span>Home</span>
       </button>
-
-      <button data-page="rewards">
-        <span style="font-size:22px">▣</span>
-        <span>Rewards</span>
-      </button>
+      
+<button data-page="rewards">
+  <span style="font-size:22px">✪</span>
+  <span>Rewards</span>
+</button>
     </nav>
   `;
 }
@@ -590,8 +590,8 @@ function homePage() {
       <span>Shared House</span>
 
       <div>
-        <span class="stat">★ ${state.points}</span>
-        <span class="stat">✿ ${state.pieces}/4</span>
+      <span class="stat">✪ ${state.points}</span>
+      <span class="stat">✿ ${state.pieces}/4</span>
       </div>
     </div>
 
@@ -1274,37 +1274,37 @@ function placementPage() {
 // ========================================
 
 function rewardsPage() {
+  const rewards = [
+    { name: "$5 Campus Cafe Voucher", cost: 3 },
+    { name: "$5 Printing Credits", cost: 3 },
+    { name: "10% off Uni Merch", cost: 4 },
+    { name: "$10 Woolworths Voucher", cost: 6 },
+    { name: "Movie Ticket", cost: 10 },
+    { name: "$5 Petrol Voucher", cost: 3 },
+    { name: "Free campus coffee voucher", cost: 4 }
+  ];
+
   return `
     ${backButton("home")}
 
-    <h1>Rewards</h1>
+    <h1 class="rewards-title">Rewards</h1>
 
-    <div class="card peach-card center">
-      <h2>Your Points</h2>
-      <h1>★ ${state.points}</h1>
+    <div class="rewards-list">
+      ${rewards.map((reward, index) => `
+        <button
+          class="reward-item ${index % 2 === 0 ? "filled" : "outlined"}"
+          data-reward-cost="${reward.cost}"
+          ${state.points < reward.cost ? "disabled" : ""}
+        >
+          <span class="reward-name">${reward.name}</span>
+          <span class="reward-cost">
+            ${reward.cost} ✪
+          </span>
+        </button>
+      `).join("")}
     </div>
-
-    <div class="card">
-      <div class="placeholder">
-        (image) Reward
-      </div>
-
-      <h3>Demo Reward</h3>
-      <p>5 Points</p>
-
-      ${primary(
-        "Redeem Reward",
-        "redeem",
-        state.points < 5
-      )}
-    </div>
-
-    <p class="small">
-      Prototype only. No real voucher is issued.
-    </p>
   `;
 }
-
 // ========================================
 // 16. RENDER SCREENS
 // ========================================
@@ -1567,6 +1567,27 @@ app.addEventListener("click", event => {
     render();
     return;
   }
+
+// Redeem selected reward
+if (button.dataset.rewardCost !== undefined) {
+  const cost = Number(button.dataset.rewardCost);
+
+  if (!Number.isFinite(cost) || cost <= 0) return;
+  if (state.points < cost) return;
+
+  const confirmed = window.confirm(
+    `Redeem this reward for ${cost} points?`
+  );
+
+  if (!confirmed) return;
+
+  state.points -= cost;
+  saveProgress();
+
+  alert("Reward redeemed!");
+  render();
+  return;
+}
 
   // Demo rewards
   if (action === "redeem") {
