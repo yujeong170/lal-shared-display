@@ -365,3 +365,124 @@ cells.forEach((cell, index) => {
 });
 
 roomGrid.addEventListener("mouseleave", clearPreview);
+
+// ========================================
+// SUPABASE — SHARED FURNITURE DISPLAY
+// ========================================
+
+// Mobile and Shared Display use different IDs
+// for the two living rooms.
+const databaseRoomId = {
+  "living-room-1": "living1",
+  "living-room-2": "living2"
+}[roomId] || roomId;
+
+// Find the PNG that matches a furniture ID.
+function findFurnitureById(furnitureId) {
+  const normalise = value =>
+    String(value)
+      .toLowerCase()
+      .replace(/\.(png)$/i, "")
+      .replace(/-\(\d+x\d+\)$/i, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const target = normalise(furnitureId);
+
+  return furnitureItems.find(item => {
+    const filename = normalise(item.file);
+    const name = normalise(item.name);
+
+    return (
+      filename === target ||
+      name === target ||
+      target.endsWith(filename)
+    );
+  });
+}
+
+// Display one furniture item from Supabase.
+function displaySavedFurniture(record) {
+  const item = findFurnitureById(record.furniture_id);
+
+  if (!item) {
+    console.warn(
+      "No matching furniture PNG:",
+      record.furniture_id
+    );
+    return;
+  }
+
+  const indices = record.cells.map(Number);
+
+  if (
+    indices.length === 0 ||
+    indices.some(index =>
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= columns * rows
+    )
+  ) {
+    console.warn("Invalid furniture cells:", record);
+    return;
+  }
+
+  const startCol = Math.min(
+    ...indices.map(index => index % columns)
+  );
+
+  const startRow = Math.min(
+    ...indices.map(index => Math.floor(index / columns))
+  );
+
+  const furniture = document.createElement("img");
+
+  furniture.src = item.src;
+  furniture.alt = item.name;
+  furniture.classList.add("placed-furniture");
+  furniture.classList.add("supabase-furniture");
+
+  furniture.style.left = `${startCol * cellSize}px`;
+  furniture.style.top = `${startRow * cellSize}px`;
+  furniture.style.width = `${item.w * cellSize}px`;
+  furniture.style.height = `${item.h * cellSize}px`;
+
+  roomGrid.appendChild(furniture);
+
+  indices.forEach(index => occupied.add(index));
+}
+
+// Load all saved furniture for this room.
+async function loadSharedFurniture() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("furniture_placements")
+      .select("id, room_id, furniture_id, cells")
+      .eq("room_id", databaseRoomId);
+
+    if (error) throw error;
+
+    // Remove previously loaded Supabase furniture.
+    document
+      .querySelectorAll(".supabase-furniture")
+      .forEach(element => element.remove());
+
+    occupied.clear();
+
+    // Display the latest saved furniture.
+    (data || []).forEach(displaySavedFurniture);
+
+    clearPreview();
+
+  } catch (error) {
+    console.error(
+      "Could not load shared furniture:",
+      error
+    );
+  }
+}
+
+// Load immediately when the display opens.
+loadSharedFurniture();
+
+// Check for new placements every 3 seconds.
+setInterval(loadSharedFurniture, 3000);

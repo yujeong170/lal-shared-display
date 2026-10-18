@@ -24,6 +24,22 @@
       <div id="roomGrid" class="room-grid" aria-label="Shared Room Grid"></div>
     </main>
 
+    <!-- Supabase library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <!-- Supabase connection -->
+    <script>
+      const SUPABASE_URL = "https://pevhdeguifevzxgwidmg.supabase.co";
+
+      const SUPABASE_KEY = "sb_publishable_i2qesWwC2zJ6xxCpMIofog_wU6H9zgo";
+
+      const supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY,
+      );
+    </script>
+
+    <!-- Shared Display -->
     <script src="script.js"></script>
   </body>
 </html>
