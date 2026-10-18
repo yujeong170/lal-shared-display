@@ -960,7 +960,7 @@ ${SHAPES.filter(shape =>
     item.room === state.room &&
     item.shape === shape.id
   )
-).map(shape => `ㄴ        <button
+).map(shape => `        <button
           class="option"
           data-shape="${shape.id}"
           ${shape.cost > availablePieces()
