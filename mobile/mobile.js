@@ -169,14 +169,9 @@ let state = {
   timerMessage: null,
   earnedLastPiece: false,
 
-  occupied: Object.fromEntries(
-    ROOMS.map(room => [
-      room.id,
-      Array.isArray(saved.occupied?.[room.id])
-        ? saved.occupied[room.id]
-        : []
-    ])
-  )
+occupied: Object.fromEntries(
+  ROOMS.map(room => [room.id, []])
+)
 };
 
 function saveProgress() {
@@ -1674,3 +1669,70 @@ app.addEventListener("input", event => {
 // ========================================
 
 render();
+
+// ========================================
+// 20. SYNC OCCUPIED CELLS WITH SUPABASE
+// ========================================
+
+let isLoadingOccupied = false;
+
+async function syncOccupiedCells() {
+  if (isLoadingOccupied || window.isSavingPlacement) return;
+
+  isLoadingOccupied = true;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("furniture_placements")
+      .select("room_id, cells");
+
+    if (error) throw error;
+
+    // Start with empty cells for all six rooms.
+    const updatedOccupied = Object.fromEntries(
+      ROOMS.map(room => [room.id, []])
+    );
+
+    // Fill them using the latest Supabase data.
+    for (const placement of data || []) {
+      if (!updatedOccupied[placement.room_id]) continue;
+
+      updatedOccupied[placement.room_id].push(
+        ...placement.cells
+      );
+    }
+
+    // Replace old local cell data with Supabase data.
+    state.occupied = Object.fromEntries(
+      Object.entries(updatedOccupied).map(([room, cells]) => [
+        room,
+        [...new Set(cells)]
+      ])
+    );
+
+    // Keep personal Pieces and Points unchanged.
+    saveProgress();
+
+    // Update the screen without refreshing.
+    render();
+
+  } catch (error) {
+    console.error("Could not sync occupied cells:", error);
+
+  } finally {
+    isLoadingOccupied = false;
+  }
+}
+
+// Sync when the mobile app opens.
+syncOccupiedCells();
+
+// Check for changes every 3 seconds.
+setInterval(syncOccupiedCells, 3000);
+
+// Sync when returning to the browser tab.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    syncOccupiedCells();
+  }
+});
