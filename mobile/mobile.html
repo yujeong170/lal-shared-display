@@ -8,6 +8,23 @@
   </head>
   <body>
     <main id="app"></main>
+
+    <!-- Supabase library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <!-- Supabase connection -->
+    <script>
+      const SUPABASE_URL = "https://pevhdeguifevzxgwidmg.supabase.co";
+
+      const SUPABASE_KEY = "sb_publishable_i2qesWwC2zJ6xxCpMIofog_wU6H9zgo";
+
+      const supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY,
+      );
+    </script>
+
+    <!-- Mobile app -->
     <script src="mobile.js"></script>
   </body>
 </html>

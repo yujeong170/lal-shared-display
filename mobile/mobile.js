@@ -1522,51 +1522,105 @@ app.addEventListener("click", event => {
   }
 
   // Confirm furniture placements
-  if (action === "confirm") {
-    const cost = reservedPieces();
+if (action === "confirm") {
+  const cost = reservedPieces();
 
-    if (
-      state.feedback !== null ||
-      state.selection.length === 0 ||
-      state.placements.length !== state.selection.length ||
-      cost > state.pieces ||
-      state.room !== TABLES[state.table]
-    ) {
-      return;
-    }
-
-    const occupied = new Set(
-      state.occupied[state.room]
-    );
-
-    for (const placement of state.placements) {
-      for (const cell of placement.cells) {
-        if (occupied.has(cell)) {
-          alert("Placement conflict. Please try again.");
-          return;
-        }
-
-        occupied.add(cell);
-      }
-    }
-
-    // Save placed furniture cells.
-    state.occupied[state.room] = [...occupied];
-
-    // Deduct pieces, award points.
-    state.pieces -= cost;
-    state.points += cost;
-
-    state.hasTriedContribution = true;
-    saveProgress();
-
-    state.feedback = cost;
-    state.selection = [];
-    state.placements = [];
-
-    render();
+  if (
+    state.feedback !== null ||
+    state.selection.length === 0 ||
+    state.placements.length !== state.selection.length ||
+    cost > state.pieces ||
+    state.room !== TABLES[state.table]
+  ) {
     return;
   }
+
+  const roomId = state.room;
+
+  // Check existing occupied cells on this device.
+  const occupied = new Set(state.occupied[roomId]);
+
+  for (const placement of state.placements) {
+    for (const cell of placement.cells) {
+      if (occupied.has(cell)) {
+        alert("Placement conflict. Please try again.");
+        return;
+      }
+
+      occupied.add(cell);
+    }
+  }
+
+  // Prepare furniture data for Supabase.
+  const furnitureData = state.placements.map(placement => ({
+    room_id: roomId,
+    furniture_id: placement.item.id,
+    cells: placement.cells
+  }));
+
+  // Prevent repeated submissions.
+  if (window.isSavingPlacement) return;
+  window.isSavingPlacement = true;
+
+  // Save furniture to Supabase.
+  (async () => {
+    try {
+      const { data: existing, error: readError } =
+        await supabaseClient
+          .from("furniture_placements")
+          .select("cells")
+          .eq("room_id", roomId);
+
+      if (readError) throw readError;
+
+      const occupiedNow = new Set(
+        (existing || []).flatMap(row => row.cells)
+      );
+
+      const hasConflict = furnitureData.some(item =>
+        item.cells.some(cell => occupiedNow.has(cell))
+      );
+
+      if (hasConflict) {
+        alert(
+          "Someone has already placed furniture here. Please try another position."
+        );
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("furniture_placements")
+        .insert(furnitureData);
+
+      if (error) throw error;
+
+      // Only update points after successful saving.
+      state.occupied[roomId] = [...occupied];
+
+      state.pieces -= cost;
+      state.points += cost;
+
+      state.hasTriedContribution = true;
+      saveProgress();
+
+      state.feedback = cost;
+      state.selection = [];
+      state.placements = [];
+
+      render();
+
+    } catch (error) {
+      console.error("Supabase save error:", error);
+      alert(
+        "Could not save furniture. Please try again."
+      );
+    } finally {
+      window.isSavingPlacement = false;
+    }
+  })();
+
+  return;
+}
 
 // Redeem selected reward
 if (button.dataset.rewardCost !== undefined) {
