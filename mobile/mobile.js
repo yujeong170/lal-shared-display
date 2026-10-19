@@ -1538,9 +1538,8 @@ ${draftFurniture}
 <div
   class="room-grid"
           style="
-                position: relative;
-                z-index: 1;
-                grid-template-columns: repeat(${room.cols}, 1fr);
+                grid-template-columns: repeat(${room.cols}, minmax(0, 1fr));
+                grid-template-rows: repeat(${room.rows}, minmax(0, 1fr));
               "
             >
               ${Array.from(
@@ -1569,26 +1568,30 @@ ${draftFurniture}
 
       ${state.feedback !== null
         ? `
-          <div
-            class="reward-animation"
-            aria-live="polite"
-          >
-            <div class="reward-puzzle">
-              ✿
+          <div class="contribution-overlay">
+            <div
+              class="contribution-popup"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="contribution-title"
+            >
+              <div class="contribution-icon">✓</div>
+
+              <h2 id="contribution-title">
+                Thanks for Contributing!
+              </h2>
+
+              <div class="contribution-points">
+                +${state.feedback} Points!
+              </div>
+
+              <p>
+                Your selected items have been added
+                to our shared space.
+              </p>
+
+              ${primary("Back to Room", "open-room")}
             </div>
-
-            <h2>
-              +${state.feedback} Points!
-            </h2>
-
-            <p>
-              Your furniture has been added!
-            </p>
-
-            ${primary(
-              "Back to Room",
-              "open-room"
-            )}
           </div>
         `
         : primary(

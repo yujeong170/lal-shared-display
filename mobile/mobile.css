@@ -813,9 +813,14 @@ button {
   pointer-events: none;
 }
 
+/* ========================================
+   PLACEMENT GRID — background and furniture
+======================================== */
+
 .placement-room {
   position: relative;
   isolation: isolate;
+  width: 100%;
 }
 
 .placement-room > img,
@@ -823,27 +828,356 @@ button {
   pointer-events: none;
 }
 
-.placement-room .room-grid {
-  background: transparent;
-}
-
-.placement-room .cell {
-  background-color: transparent;
-}
-
+/* Keep the grid clickable above the background and furniture. */
 .placement-room .room-grid {
   position: relative;
-  z-index: 4 !important;
+  z-index: 4;
   background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
+/* Subtle grid lines; never cover the room image or furniture. */
 .placement-room .cell,
 .placement-room .cell.occupied,
 .placement-room .cell.draft {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: transparent;
+}
+
+/* Show invalid positions without obscuring the room. */
+.placement-room .cell.invalid {
+  background: rgba(220, 75, 75, 0.22);
+}
+
+/* Highlight a possible position gently. */
+.placement-room .cell.preview {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* ========================================
+   SPACING — scoped to specific screens
+======================================== */
+
+/* General action buttons already have a 12px top margin.
+   Increase only the gap before important actions. */
+.placement-screen > .primary,
+.placement-screen > .secondary {
+  margin-top: 24px;
+}
+
+.placement-screen .placement-layout {
+  margin-top: 20px;
+}
+
+.placement-screen .placement-list {
+  margin: 14px 0 18px;
+}
+
+.placement-screen .placement-list button {
+  margin: 0;
+}
+
+.placement-screen .placement-layout .primary,
+.placement-screen .placement-layout .secondary {
+  margin-top: 22px;
+  margin-bottom: 18px;
+}
+
+.selection-row + .selection-row {
+  margin-top: 12px;
+}
+
+/* Comfortable spacing between a room preview and its next section. */
+.real-room-preview {
+  margin-bottom: 18px;
+}
+
+/* ========================================
+   CONTRIBUTION SUCCESS POPUP
+======================================== */
+
+.contribution-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+  background: rgba(35, 32, 27, 0.5);
+}
+
+.contribution-popup {
+  width: 100%;
+  max-width: 380px;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+
+  padding: 30px 24px;
+  border-radius: 24px;
+  background: #fffaf0;
+
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+
+  animation: contributionPop 0.3s ease-out;
+}
+
+.contribution-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  background: #ffe7e1;
+  color: #85885b;
+
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.contribution-popup h2 {
+  margin-bottom: 14px;
+  font-size: 22px;
+}
+
+.contribution-points {
+  margin-bottom: 12px;
+  color: #85885b;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.contribution-popup p {
+  margin-bottom: 24px;
+  color: #756f67;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.contribution-popup .primary {
+  margin-top: 12px;
+}
+
+@keyframes contributionPop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========================================
+   PLACEMENT GRID - KEEP ORIGINAL PROPORTIONS
+======================================== */
+
+.placement-layout {
+  min-width: 0;
+}
+
+.placement-layout > div {
+  min-width: 0;
+}
+
+/* The room follows the size of its square cells */
+.placement-room {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: auto !important;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Square grid cells */
+.placement-room .room-grid {
+  position: relative !important;
+  inset: auto !important;
+
+  display: grid;
+  width: 100% !important;
+  height: auto !important;
+  max-width: none !important;
+
+  margin: 0 !important;
+  border: none;
+  background: transparent;
+
+  z-index: 4;
+}
+
+/* Restore square cells */
+.placement-room .cell {
+  width: 100%;
+  height: auto !important;
+  min-width: 0;
+  min-height: 0;
+
+  aspect-ratio: 1 / 1 !important;
+
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
   background: transparent !important;
 }
 
+/* Previously placed and draft cells */
 .placement-room .cell.occupied,
 .placement-room .cell.draft {
+  background: transparent !important;
   color: transparent;
+}
+
+/* Room images stay inside the grid */
+.placement-room > img {
+  max-width: none;
+  pointer-events: none;
+}
+
+/* Landscape: controls on left, room on right */
+@media (orientation: landscape) {
+  .placement-layout {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .placement-room {
+    width: 100%;
+  }
+}
+
+/* Portrait: stack controls and room */
+@media (orientation: portrait) {
+  .placement-layout {
+    display: block;
+  }
+}
+
+/* Grid always matches the room background */
+.placement-room .room-grid {
+  position: absolute !important;
+  inset: 0;
+  z-index: 4;
+
+  display: grid;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+
+  margin: 0 !important;
+  border: none;
+  background: transparent;
+}
+
+/* Cells stretch with the grid instead of forcing square cells */
+.placement-room .cell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: auto;
+
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent !important;
+}
+
+/* Already occupied cells remain visible but not highlighted */
+.placement-room .cell.occupied,
+.placement-room .cell.draft {
+  background: transparent !important;
+  color: transparent;
+}
+
+/* Keep all room images within the same container */
+.placement-room > img {
+  max-width: none;
+  pointer-events: none;
+}
+
+/* Landscape layout */
+@media (orientation: landscape) {
+  .placement-layout {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .placement-layout > div {
+    min-width: 0;
+  }
+
+  .placement-room {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Narrow screens */
+@media (max-width: 600px) {
+  .placement-layout {
+    display: block;
+  }
+
+  .placement-room {
+    width: 100%;
+  }
+}
+
+.room-preview-furniture {
+  object-fit: contain !important;
+}
+
+/* FIX: Restore placement grid dimensions */
+
+.placement-room {
+  width: 100%;
+  max-width: 100%;
+  height: auto !important;
+  aspect-ratio: auto !important;
+  overflow: hidden;
+}
+
+.placement-room .room-grid {
+  position: relative !important;
+  inset: auto !important;
+
+  display: grid !important;
+  width: 100% !important;
+  height: auto !important;
+
+  grid-template-rows: none !important;
+  grid-auto-rows: auto !important;
+}
+
+.placement-room .cell {
+  display: block;
+  width: 100%;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+
+  border: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
 }
