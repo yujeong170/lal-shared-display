@@ -127,3 +127,16 @@ body {
 .room-grid .cell:hover {
   background-color: transparent;
 }
+
+/* Room QR code decorations */
+
+.screen {
+  position: relative;
+}
+
+.room-qr-image {
+  position: absolute;
+  height: auto;
+  z-index: 20;
+  pointer-events: none;
+}

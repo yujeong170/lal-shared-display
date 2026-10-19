@@ -443,3 +443,62 @@ loadSharedFurniture();
 
 // Check for new placements every 3 seconds.
 setInterval(loadSharedFurniture, 3000);
+
+// ========================================
+// ROOM QR CODE DECORATIONS
+// ========================================
+
+const roomQRImages = {
+  balcony: {
+    file: "balcony-QR.png",
+    position: "left",
+    width: 180,
+    top: 0
+  },
+
+  bathroom: {
+    file: "bathroom-QR.png",
+    position: "left",
+    width: 180,
+    top: 0
+  },
+
+  "living-room-1": {
+    file: "living room 1-QR.png",
+    position: "right",
+    width: 180,
+    bottom: 5,
+    right: 5
+  }
+};
+
+function addRoomQRImage() {
+  const config = roomQRImages[roomId];
+
+  if (!config) return;
+
+  const qrImage = document.createElement("img");
+
+  qrImage.src =
+    `assets/cat/${encodeURIComponent(config.file)}`;
+
+  qrImage.alt = `${roomId} QR code`;
+
+  qrImage.classList.add("room-qr-image");
+
+  qrImage.style.width = `${config.width}px`;
+if (config.bottom !== undefined) {
+  qrImage.style.bottom = `${config.bottom}px`;
+} else {
+  qrImage.style.top = `${config.top}px`;
+}
+
+if (config.position === "left") {
+  qrImage.style.left = "0";
+} else {
+  qrImage.style.right = `${config.right ?? 0}px`;
+}
+  screen.appendChild(qrImage);
+}
+
+addRoomQRImage();
