@@ -117,6 +117,7 @@ function furnitureImage(item) {
 // Change TEST_MODE to false for real 15–45 min sessions.
 const TEST_MODE = true;
 const TEST_FOCUS_SECONDS = 3;
+const TEST_BREAK_SECONDS = 3;
 
 const TABLES = {
   "01": "balcony",
@@ -271,7 +272,36 @@ function updateTimerDisplay() {
   const button = document.getElementById("timer-button");
 
   if (time) {
-    time.textContent = formatTime(timerRemaining());
+    if (TEST_MODE) {
+      const total = Math.max(1, timer.totalSeconds);
+
+      const remaining = timer.running && timer.endsAt !== null
+        ? Math.max(0, (timer.endsAt - Date.now()) / 1000)
+        : timer.secondsLeft;
+
+      const progress = Math.max(
+        0,
+        Math.min(1, (total - remaining) / total)
+      );
+
+      if (timer.mode === "study") {
+        // Count down from the user's selected duration
+        const displaySeconds = Math.ceil(
+          timer.studyMinutes * 60 * (1 - progress)
+        );
+
+        time.textContent = formatTime(displaySeconds);
+      } else {
+        // Count down from 5 minutes
+        const displaySeconds = Math.ceil(
+          timer.breakMinutes * 60 * (1 - progress)
+        );
+
+        time.textContent = formatTime(displaySeconds);
+      }
+    } else {
+      time.textContent = formatTime(timerRemaining());
+    }
   }
 
   if (mode) {
@@ -368,9 +398,15 @@ function finishTimer() {
     saveProgress();
 
     // Start the five-minute break automatically.
-    timer.mode = "break";
-    timer.totalSeconds = timer.breakMinutes * 60;
-    timer.secondsLeft = timer.totalSeconds;
+
+timer.mode = "break";
+
+timer.totalSeconds = TEST_MODE
+  ? TEST_BREAK_SECONDS
+  : timer.breakMinutes * 60;
+
+timer.secondsLeft = timer.totalSeconds;
+
     timer.running = true;
     timer.endsAt = Date.now() + timer.secondsLeft * 1000;
 
