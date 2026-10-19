@@ -1231,7 +1231,7 @@ function selectionPage() {
       : state.selection.map((item, index) => `
         <div class="selection-row">
           <span>
-            (image) ${item.name}
+            ${item.name}
 
             <br>
 
@@ -1328,7 +1328,7 @@ function placementPage() {
   const nextIndex = state.placements.length;
   const item = state.selection[nextIndex];
 
-  const fixedCells = state.occupied[state.room];
+  const fixedCells = state.occupied[state.room] || [];
 
   const draftCells = state.placements.flatMap(
     placement => placement.cells
@@ -1337,6 +1337,147 @@ function placementPage() {
   const allPlaced =
     state.selection.length > 0 &&
     state.placements.length === state.selection.length;
+
+    // Furniture already confirmed in Supabase
+const confirmedFurniture = sharedFurnitureRecords
+  .filter(record => record.room_id === state.room)
+  .map(record => {
+    const furniture = FURNITURE.find(
+      f => f.id === record.furniture_id
+    );
+
+    if (!furniture || !record.cells?.length) return "";
+
+    const shape = shapeOf(furniture);
+    if (!shape) return "";
+
+    const startCol = Math.min(
+      ...record.cells.map(cell => cell % room.cols)
+    );
+
+    const startRow = Math.min(
+      ...record.cells.map(cell =>
+        Math.floor(cell / room.cols)
+      )
+    );
+
+    const imageUrl = new URL(
+      furnitureImage(furniture),
+      document.querySelector('script[src$="mobile.js"]').src
+    ).href;
+
+    return `
+      <img
+        src="${imageUrl}"
+        alt="${furniture.name}"
+        style="
+          position: absolute;
+          left: ${(startCol / room.cols) * 100}%;
+          top: ${(startRow / room.rows) * 100}%;
+          width: ${(shape.w / room.cols) * 100}%;
+          height: ${(shape.h / room.rows) * 100}%;
+          object-fit: fill;
+          pointer-events: none;
+          z-index: 2;
+        "
+      >
+    `;
+  })
+  .join("");
+
+// Furniture currently being placed: black silhouettes
+const draftFurniture = state.placements
+  .map(placement => {
+    const furniture = placement.item;
+    const shape = shapeOf(furniture);
+
+    if (!shape || !placement.cells?.length) return "";
+
+    const startCol = Math.min(
+      ...placement.cells.map(cell => cell % room.cols)
+    );
+
+    const startRow = Math.min(
+      ...placement.cells.map(cell =>
+        Math.floor(cell / room.cols)
+      )
+    );
+
+    const imageUrl = new URL(
+      furnitureImage(furniture),
+      document.querySelector('script[src$="mobile.js"]').src
+    ).href;
+
+    return `
+      <img
+        src="${imageUrl}"
+        alt="${furniture.name} silhouette"
+        style="
+          position: absolute;
+          left: ${(startCol / room.cols) * 100}%;
+          top: ${(startRow / room.rows) * 100}%;
+          width: ${(shape.w / room.cols) * 100}%;
+          height: ${(shape.h / room.rows) * 100}%;
+          object-fit: fill;
+          filter: brightness(0);
+          pointer-events: none;
+          z-index: 3;
+        "
+      >
+    `;
+  })
+  .join("");
+
+  // Room background
+  const background = ROOM_BACKGROUNDS[state.room];
+
+  const backgroundUrl = background
+    ? new URL(
+        `../assets/bg/${background.file}`,
+        document.querySelector('script[src$="mobile.js"]').src
+      ).href
+    : "";
+
+  const backgroundImage = background
+    ? background.floorOnly
+      ? `
+        <div
+          style="
+            position: absolute;
+            inset: 0;
+            background-color: ${background.wallColor};
+          "
+        ></div>
+
+        <img
+          src="${backgroundUrl}"
+          alt=""
+          style="
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 50%;
+            object-fit: fill;
+            pointer-events: none;
+          "
+        >
+      `
+      : `
+        <img
+          src="${backgroundUrl}"
+          alt=""
+          style="
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            pointer-events: none;
+          "
+        >
+      `
+    : "";
 
   return `
     <div class="placement-screen">
@@ -1382,31 +1523,47 @@ function placementPage() {
 
         <div>
           <div
-            class="room-grid"
-            style="grid-template-columns:repeat(${room.cols},1fr)"
+            class="placement-room"
+            style="
+              position: relative;
+              width: 100%;
+              overflow: hidden;
+            "
           >
-            ${Array.from(
-              { length: room.cols * room.rows },
-              (_, index) => {
-                const fixed = fixedCells.includes(index);
-                const draft = draftCells.includes(index);
+${backgroundImage}
 
-                return `
-                  <button
-                    class="cell ${fixed ? "occupied" : ""}
-                    ${draft ? "draft" : ""}"
-                    data-cell="${index}"
-                    ${fixed || draft || !item
-                      ? "disabled"
-                      : ""}
-                  >
-                    ${fixed ? "■" : draft ? "◆" : ""}
-                  </button>
-                `;
-              }
-            ).join("")}
+${confirmedFurniture}
+${draftFurniture}
+
+<div
+  class="room-grid"
+          style="
+                position: relative;
+                z-index: 1;
+                grid-template-columns: repeat(${room.cols}, 1fr);
+              "
+            >
+              ${Array.from(
+                { length: room.cols * room.rows },
+                (_, index) => {
+                  const fixed = fixedCells.includes(index);
+                  const draft = draftCells.includes(index);
+
+                  return `
+                    <button
+                      class="cell ${fixed ? "occupied" : ""} ${draft ? "draft" : ""}"
+                      data-cell="${index}"
+                      ${fixed || draft || !item
+                        ? "disabled"
+                        : ""}
+                    >
+                  ${""}
+                    </button>
+                  `;
+                }
+              ).join("")}
+            </div>
           </div>
-
         </div>
       </div>
 

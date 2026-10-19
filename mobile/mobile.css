@@ -812,3 +812,38 @@ button {
   image-rendering: auto;
   pointer-events: none;
 }
+
+.placement-room {
+  position: relative;
+  isolation: isolate;
+}
+
+.placement-room > img,
+.placement-room > div:first-child:not(.room-grid) {
+  pointer-events: none;
+}
+
+.placement-room .room-grid {
+  background: transparent;
+}
+
+.placement-room .cell {
+  background-color: transparent;
+}
+
+.placement-room .room-grid {
+  position: relative;
+  z-index: 4 !important;
+  background: transparent;
+}
+
+.placement-room .cell,
+.placement-room .cell.occupied,
+.placement-room .cell.draft {
+  background: transparent !important;
+}
+
+.placement-room .cell.occupied,
+.placement-room .cell.draft {
+  color: transparent;
+}
