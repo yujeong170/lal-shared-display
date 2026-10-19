@@ -156,9 +156,6 @@ let state = {
   // One welcome piece, only on first visit.
   pieces: Number.isFinite(saved.pieces) ? saved.pieces : 1,
   points: Number.isFinite(saved.points) ? saved.points : 0,
-  totalStudyMinutes: Number.isFinite(saved.totalStudyMinutes)
-    ? saved.totalStudyMinutes
-    : 0,
 
   hasTriedContribution: Boolean(saved.hasTriedContribution),
   showWelcome: isFirstVisit,
@@ -167,6 +164,7 @@ let state = {
   selection: [],
   placements: [],
   feedback: null,
+  puzzleComplete: false,
   timerMessage: null,
   earnedLastPiece: false,
 
@@ -182,7 +180,6 @@ function saveProgress() {
       table: state.table,
       pieces: state.pieces,
       points: state.points,
-      totalStudyMinutes: state.totalStudyMinutes,
       occupied: state.occupied,
       hasTriedContribution: state.hasTriedContribution
     }));
@@ -366,12 +363,6 @@ function setStudyDuration(minutes) {
 
   timer.secondsLeft = timer.totalSeconds;
 
-  const label = document.getElementById("duration-label");
-
-  if (label) {
-    label.textContent = `${value} min`;
-  }
-
   updateTimerDisplay();
 }
 
@@ -382,8 +373,6 @@ function finishTimer() {
   timer.endsAt = null;
 
   if (completedMode === "study") {
-    state.totalStudyMinutes += timer.studyMinutes;
-
     const earned = state.pieces < 4;
 
     if (earned) {
@@ -464,6 +453,45 @@ function reservedPieces() {
 
 function availablePieces() {
   return state.pieces - reservedPieces();
+}
+
+function canFitItems(items, room = currentRoom()) {
+  if (!room) return false;
+
+  const occupied = new Set(state.occupied[room.id] || []);
+
+  function placeNext(index) {
+    if (index === items.length) return true;
+
+    const item = items[index];
+
+    for (let start = 0; start < room.cols * room.rows; start++) {
+      const cells = cellsFor(room, item, start);
+
+      if (!cells || cells.some(cell => occupied.has(cell))) continue;
+
+      cells.forEach(cell => occupied.add(cell));
+
+      if (placeNext(index + 1)) return true;
+
+      cells.forEach(cell => occupied.delete(cell));
+    }
+
+    return false;
+  }
+
+  return placeNext(0);
+}
+
+function canFitShape(shape) {
+  const sample = FURNITURE.find(item =>
+    item.room === state.room && item.shape === shape.id
+  );
+
+  return Boolean(sample) && canFitItems([
+    ...state.selection,
+    sample
+  ]);
 }
 
 function navigate(page) {
@@ -769,32 +797,12 @@ function homePage() {
 
   return `
     <div class="topbar">
-      <span>Shared House</span>
+      <span>Mingodoro</span>
 
       <div>
       <span class="stat">✪ ${state.points}</span>
       <span class="stat">✿ ${state.pieces}/4</span>
       </div>
-    </div>
-
-    <div class="challenge">
-      <div class="between">
-        <div>
-          <strong>Daily Challenge</strong>
-          <p class="small" style="color:white">
-            Study for an hour
-          </p>
-        </div>
-
-        <span class="small" style="color:white">
-          ${Math.min(state.totalStudyMinutes, 60)} / 60 min
-        </span>
-      </div>
-
-      ${progressBar(
-        Math.min(state.totalStudyMinutes, 60),
-        60
-      )}
     </div>
 
     ${!state.hasTriedContribution
@@ -825,12 +833,7 @@ function homePage() {
       : ""}
 
     <div class="timer-settings">
-      <div class="between">
-        <strong>Focus Duration</strong>
-        <span id="duration-label">
-          ${timer.studyMinutes} min
-        </span>
-      </div>
+      <strong>Focus Duration</strong>
 
       <input
         id="study-duration"
@@ -866,13 +869,13 @@ function homePage() {
       <span>5-minute break after each session</span>
     </div>
 
-    <p class="small center">
+    <p class="small center focus-reward-note">
       ${state.pieces === 4
         ? "Pieces full (4/4). You can still study."
         : "Complete a focus session to earn 1 Puzzle Piece."}
     </p>
 
-    <div class="section-heading">
+    <div class="section-heading events-heading">
       <h2>Events</h2>
 
       <button
@@ -1073,6 +1076,8 @@ function detailPage() {
   const isMyRoom =
     Boolean(state.table) &&
     room.id === TABLES[state.table];
+  const roomIsFull =
+    state.occupied[room.id].length >= room.cols * room.rows;
 
   return `
     ${backButton("rooms")}
@@ -1101,7 +1106,7 @@ function detailPage() {
       ? primary(
           "Contribute to Room →",
           "start-contribution",
-          state.pieces === 0
+          state.pieces === 0 || roomIsFull
         )
       : `
         <div class="notice">
@@ -1137,7 +1142,7 @@ ${SHAPES.filter(shape =>
 ).map(shape => `        <button
           class="option"
           data-shape="${shape.id}"
-          ${shape.cost > availablePieces()
+          ${shape.cost > availablePieces() || !canFitShape(shape)
             ? "disabled"
             : ""}
         >
@@ -1486,7 +1491,7 @@ const draftFurniture = state.placements
       <h2>Place Your Furniture</h2>
 
       <p class="small">
-        Rotate your phone to landscape for a larger grid.
+        Tap a cell to place your furniture.
       </p>
 
       <div class="placement-layout">
@@ -1578,7 +1583,9 @@ ${draftFurniture}
               <div class="contribution-icon">✓</div>
 
               <h2 id="contribution-title">
-                Thanks for Contributing!
+                ${state.puzzleComplete
+                  ? "Puzzle Complete!"
+                  : "Thanks for Contributing!"}
               </h2>
 
               <div class="contribution-points">
@@ -1586,8 +1593,11 @@ ${draftFurniture}
               </div>
 
               <p>
-                Your selected items have been added
-                to our shared space.
+                ${state.puzzleComplete
+                  ? `The shared room is complete. A new empty
+                    puzzle is now ready for contributions.`
+                  : `Your selected items have been added
+                    to our shared space.`}
               </p>
 
               ${primary("Back to Room", "open-room")}
@@ -1644,6 +1654,16 @@ function rewardsPage() {
 // ========================================
 
 function render() {
+  // Keep the open confirmation dialog mounted so background updates
+  // do not replay its entrance animation or interrupt button focus.
+  if (
+    state.page === "placement" &&
+    state.feedback !== null &&
+    app.querySelector(".contribution-overlay")
+  ) {
+    return;
+  }
+
   const pages = {
     home: homePage,
     focus: focusPage,
@@ -1704,7 +1724,8 @@ app.addEventListener("click", event => {
 
     if (
       item &&
-      shapeOf(item).cost <= availablePieces()
+      shapeOf(item).cost <= availablePieces() &&
+      canFitItems([...state.selection, item])
     ) {
       state.selection.push({ ...item });
       navigate("selection");
@@ -1763,6 +1784,7 @@ app.addEventListener("click", event => {
     state.selection = [];
     state.placements = [];
     state.feedback = null;
+    state.puzzleComplete = false;
 
     navigate("selection");
     return;
@@ -1816,9 +1838,12 @@ app.addEventListener("click", event => {
 
   // Start contribution
   if (action === "start-contribution") {
+    const room = currentRoom();
+
     if (
       state.room !== TABLES[state.table] ||
-      state.pieces === 0
+      state.pieces === 0 ||
+      state.occupied[state.room].length >= room.cols * room.rows
     ) {
       return;
     }
@@ -1826,6 +1851,7 @@ app.addEventListener("click", event => {
     state.selection = [];
     state.placements = [];
     state.feedback = null;
+    state.puzzleComplete = false;
 
     navigate("shape");
     return;
@@ -1842,8 +1868,16 @@ app.addEventListener("click", event => {
   }
 
   if (action === "placement") {
+    if (!canFitItems(state.selection)) {
+      alert("These items no longer fit in the available cells.");
+      state.placements = [];
+      navigate("shape");
+      return;
+    }
+
     state.placements = [];
     state.feedback = null;
+    state.puzzleComplete = false;
 
     navigate("placement");
     return;
@@ -1928,16 +1962,44 @@ if (action === "confirm") {
 
       if (error) throw error;
 
+      furnitureData.forEach(item =>
+        item.cells.forEach(cell => occupiedNow.add(cell))
+      );
+
       // Only update points after successful saving.
-      state.occupied[roomId] = [...occupied];
+      state.occupied[roomId] = [...occupiedNow];
 
       state.pieces -= cost;
       state.points += cost;
 
       state.hasTriedContribution = true;
+
+      const room = ROOMS.find(item => item.id === roomId);
+      const puzzleComplete =
+        occupiedNow.size >= room.cols * room.rows;
+      let puzzleWasReset = false;
+
+      if (puzzleComplete) {
+        const { error: resetError } = await supabaseClient
+          .from("furniture_placements")
+          .delete()
+          .eq("room_id", roomId);
+
+        if (resetError) {
+          console.error("Could not reset completed room:", resetError);
+        } else {
+          state.occupied[roomId] = [];
+          puzzleWasReset = true;
+          sharedFurnitureRecords = sharedFurnitureRecords.filter(
+            record => record.room_id !== roomId
+          );
+        }
+      }
+
       saveProgress();
 
       state.feedback = cost;
+      state.puzzleComplete = puzzleWasReset;
       state.selection = [];
       state.placements = [];
 
@@ -2026,13 +2088,39 @@ const { data, error } = await supabaseClient
   .select("room_id, furniture_id, cells");
     if (error) throw error;
 
+    let activeRecords = data || [];
+
+    for (const room of ROOMS) {
+      const filledCells = new Set(
+        activeRecords
+          .filter(record => record.room_id === room.id)
+          .flatMap(record => record.cells)
+      );
+
+      if (filledCells.size < room.cols * room.rows) continue;
+
+      const { error: resetError } = await supabaseClient
+        .from("furniture_placements")
+        .delete()
+        .eq("room_id", room.id);
+
+      if (resetError) {
+        console.error("Could not reset completed room:", resetError);
+        continue;
+      }
+
+      activeRecords = activeRecords.filter(
+        record => record.room_id !== room.id
+      );
+    }
+
     // Start with empty cells for all six rooms.
     const updatedOccupied = Object.fromEntries(
       ROOMS.map(room => [room.id, []])
     );
 
     // Fill them using the latest Supabase data.
-    for (const placement of data || []) {
+    for (const placement of activeRecords) {
       if (!updatedOccupied[placement.room_id]) continue;
 
       updatedOccupied[placement.room_id].push(
@@ -2048,7 +2136,7 @@ const { data, error } = await supabaseClient
       ])
     );
 
-    sharedFurnitureRecords = data || [];
+    sharedFurnitureRecords = activeRecords;
 
     // Keep personal Pieces and Points unchanged.
     saveProgress();

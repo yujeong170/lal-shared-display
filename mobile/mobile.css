@@ -238,15 +238,6 @@ p {
 }
 
 
-.challenge {
-  background: var(--olive);
-  color: white;
-  border-radius: 35px;
-  padding: 16px;
-  margin: 20px 0;
-}
-
-
 .timer-circle button {
   border: 0;
   background: var(--peach);
@@ -344,19 +335,6 @@ p {
 }
 
 @media (orientation: landscape) {
-  #app:has(.placement-screen) {
-    width: 100%;
-    max-width: none;
-    padding: 12px 18px 24px;
-  }
-
-  .placement-layout {
-    display: grid;
-    grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr);
-    gap: 16px;
-    align-items: start;
-  }
-
   .room-grid {
     width: min(100%, 75dvh);
   }
@@ -426,6 +404,7 @@ p {
   justify-content: space-between;
   gap: 12px;
   margin-top: -12px;
+  margin-bottom: 22px;
 }
 
 .timer-actions button {
@@ -440,6 +419,25 @@ p {
   font-size: 11px;
   color: #777568;
   text-align: right;
+}
+
+.focus-reward-note {
+  margin: 0 0 26px;
+}
+
+.events-heading {
+  padding-top: 10px;
+  margin-bottom: 12px;
+}
+
+.events-heading h2 {
+  margin: 0;
+}
+
+.events-heading .back {
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
 }
 
 
@@ -983,6 +981,7 @@ button {
 ======================================== */
 
 .placement-layout {
+  display: block;
   min-width: 0;
 }
 
@@ -1044,15 +1043,8 @@ button {
   pointer-events: none;
 }
 
-/* Landscape: controls on left, room on right */
+/* Keep the room within the app width in landscape. */
 @media (orientation: landscape) {
-  .placement-layout {
-    display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
-    gap: 20px;
-    align-items: start;
-  }
-
   .placement-room {
     width: 100%;
   }
@@ -1109,13 +1101,6 @@ button {
 
 /* Landscape layout */
 @media (orientation: landscape) {
-  .placement-layout {
-    display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
-    gap: 20px;
-    align-items: start;
-  }
-
   .placement-layout > div {
     min-width: 0;
   }
