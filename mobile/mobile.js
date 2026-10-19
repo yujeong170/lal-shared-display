@@ -1039,7 +1039,15 @@ function roomsPage() {
       6 rooms, built together
     </p>
 
-    <div class="grid-two">
+    <div class="shared-house">
+      <div class="shared-house-roof" aria-hidden="true">
+        <img src="../assets/house/house%20roof.PNG" alt="" />
+      </div>
+      <div class="shared-house-body">
+        <div class="shared-house-frame" aria-hidden="true">
+          <img src="../assets/house/house%20frame.PNG" alt="" />
+        </div>
+        <div class="grid-two rooms-list">
       ${ROOMS.map(room => `
         <button
           class="option"
@@ -1055,6 +1063,8 @@ ${roomPreview(room.id)}
             : ""}
         </button>
       `).join("")}
+        </div>
+      </div>
     </div>
   `;
 }
