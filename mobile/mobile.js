@@ -576,6 +576,157 @@ function timerCircle(buttonLabel = "Start Focus", action = "toggle-timer") {
 // 4. HOME
 // ========================================
 
+// ========================================
+// REAL ROOM PREVIEW
+// ========================================
+
+const ROOM_BACKGROUNDS = {
+  balcony: {
+    file: "balcony-floor.png",
+    floorOnly: true,
+    wallColor: "#768E78"
+  },
+  bathroom: {
+    file: "bathroom-floor.png",
+    floorOnly: true,
+    wallColor: "#B7CBDB"
+  },
+  bedroom: {
+    file: "bedroom.png",
+    floorOnly: false
+  },
+  kitchen: {
+    file: "kitchen.png",
+    floorOnly: false
+  },
+  living1: {
+    file: "living-room-1-floor.png",
+    floorOnly: true,
+    wallColor: "#FFD0C4"
+  },
+  living2: {
+    file: "living-room-2-floor.png",
+    floorOnly: true,
+    wallColor: "#B5A67B"
+  }
+};
+
+let sharedFurnitureRecords = [];
+
+
+function roomPreview(roomId) {
+  const room = ROOMS.find(r => r.id === roomId);
+  const background = ROOM_BACKGROUNDS[roomId];
+
+  if (!room || !background) return "";
+
+  // Works with both Live Server and GitHub Pages
+  const backgroundUrl = new URL(
+    `../assets/bg/${background.file}`,
+    document.querySelector('script[src$="mobile.js"]').src
+  ).href;
+
+  // Background image
+  const backgroundImage = background.floorOnly
+    ? `
+      <div
+        style="
+          position: absolute;
+          inset: 0;
+          background-color: ${background.wallColor};
+        "
+      ></div>
+
+      <img
+        src="${backgroundUrl}"
+        alt=""
+        style="
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          width: 100%;
+          height: 50%;
+          object-fit: fill;
+        "
+      >
+    `
+    : `
+      <img
+        src="${backgroundUrl}"
+        alt=""
+        style="
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: fill;
+        "
+      >
+    `;
+
+  // Furniture already saved in Supabase
+  const furniture = sharedFurnitureRecords
+    .filter(record => record.room_id === roomId)
+    .map(record => {
+      const item = FURNITURE.find(
+        f => f.id === record.furniture_id
+      );
+
+      if (!item || !record.cells?.length) return "";
+
+      const shape = shapeOf(item);
+
+      const startCol = Math.min(
+        ...record.cells.map(cell => cell % room.cols)
+      );
+
+      const startRow = Math.min(
+        ...record.cells.map(cell =>
+          Math.floor(cell / room.cols)
+        )
+      );
+
+      const imageUrl = new URL(
+        furnitureImage(item),
+        document.querySelector('script[src$="mobile.js"]').src
+      ).href;
+
+      return `
+        <img
+          class="room-preview-furniture"
+          src="${imageUrl}"
+          alt="${item.name}"
+          style="
+            position: absolute;
+            left: ${(startCol / room.cols) * 100}%;
+            top: ${(startRow / room.rows) * 100}%;
+            width: ${(shape.w / room.cols) * 100}%;
+            height: ${(shape.h / room.rows) * 100}%;
+            object-fit: fill;
+            z-index: 2;
+          "
+        >
+      `;
+    })
+    .join("");
+
+  return `
+    <div
+      class="real-room-preview"
+      style="
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 12px;
+      "
+    >
+      ${backgroundImage}
+      ${furniture}
+    </div>
+  `;
+}
+
 function homePage() {
   // Always use the JOINED room, not the last viewed room.
   const room = joinedRoom();
@@ -704,10 +855,9 @@ function homePage() {
             YOUR TABLE · ${state.table}
           </span>
 
-          <div class="placeholder" style="margin:14px 0">
-            (image) ${room.name}
-          </div>
-
+<div style="margin:14px 0">
+  ${roomPreview(room.id)}
+</div>
           <h3>${room.name}</h3>
 
           <p>Contribute to your shared room.</p>
@@ -856,10 +1006,7 @@ function roomsPage() {
           class="option"
           data-room="${room.id}"
         >
-          <div class="placeholder">
-            (image)
-          </div>
-
+${roomPreview(room.id)}
           <h3>${room.name}</h3>
 
           ${roomProgress(room)}
@@ -902,13 +1049,9 @@ function detailPage() {
       </span>
     </p>
 
-    <div
-      class="placeholder"
-      style="height:210px"
-    >
-      (image) Room Preview
-    </div>
-
+<div style="margin: 16px 0 20px;">
+  ${roomPreview(room.id)}
+</div>
     <p>
       Contribute furniture to complete this shared space.
     </p>
@@ -1682,10 +1825,9 @@ async function syncOccupiedCells() {
   isLoadingOccupied = true;
 
   try {
-    const { data, error } = await supabaseClient
-      .from("furniture_placements")
-      .select("room_id, cells");
-
+const { data, error } = await supabaseClient
+  .from("furniture_placements")
+  .select("room_id, furniture_id, cells");
     if (error) throw error;
 
     // Start with empty cells for all six rooms.
@@ -1709,6 +1851,8 @@ async function syncOccupiedCells() {
         [...new Set(cells)]
       ])
     );
+
+    sharedFurnitureRecords = data || [];
 
     // Keep personal Pieces and Points unchanged.
     saveProgress();

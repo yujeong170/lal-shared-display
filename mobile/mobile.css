@@ -793,3 +793,22 @@ button {
   opacity: 1;
   cursor: not-allowed;
 }
+
+/* ========================================
+   REAL ROOM PREVIEW
+======================================== */
+
+.real-room-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.room-preview-furniture {
+  position: absolute;
+  object-fit: fill;
+  image-rendering: auto;
+  pointer-events: none;
+}
