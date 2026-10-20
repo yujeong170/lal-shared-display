@@ -145,7 +145,7 @@ const backgrounds = {
   "living-room-1": {
     file: "living-room-1-floor.png",
     floorOnly: true,
-    wallColor: "#FFD0C4"
+    wallColor: "#FFE7E1"
   },
 
   "living-room-2": {
