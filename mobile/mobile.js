@@ -163,6 +163,7 @@ let state = {
   selectedShape: null,
   selection: [],
   placements: [],
+  activePlacementIndex: null,
   feedback: null,
   puzzleComplete: false,
   timerMessage: null,
@@ -1354,9 +1355,21 @@ function canPlace(item, index) {
 // 14. LANDSCAPE PLACEMENT
 // ========================================
 
+function isFurniturePlaced(index) {
+  return state.placements.some(placement => placement.selectionIndex === index);
+}
+
+function activePlacementIndex() {
+  const index = state.activePlacementIndex;
+  if (Number.isInteger(index) && state.selection[index] && !isFurniturePlaced(index)) {
+    return index;
+  }
+  return state.selection.findIndex((item, index) => !isFurniturePlaced(index));
+}
+
 function placementPage() {
   const room = currentRoom();
-  const nextIndex = state.placements.length;
+  const nextIndex = activePlacementIndex();
   const item = state.selection[nextIndex];
 
   const fixedCells = state.occupied[state.room] || [];
@@ -1531,9 +1544,11 @@ const draftFurniture = state.placements
             ${state.selection.map((f, index) => `
               <button
                 class="${index === nextIndex ? "active" : ""}"
-                disabled
+                data-placement-item="${index}"
+                aria-pressed="${index === nextIndex}"
+                ${isFurniturePlaced(index) || state.feedback !== null ? "disabled" : ""}
               >
-                ${index < nextIndex ? "✓ " : ""}
+                ${isFurniturePlaced(index) ? "✓ " : ""}
                 ${f.name}
               </button>
             `).join("")}
@@ -1782,18 +1797,29 @@ app.addEventListener("click", event => {
     return;
   }
 
+  // Choose any unplaced furniture, including duplicate items independently.
+  if (button.dataset.placementItem !== undefined) {
+    const index = Number(button.dataset.placementItem);
+    if (state.page === "placement" && state.feedback === null &&
+        Number.isInteger(index) && state.selection[index] && !isFurniturePlaced(index)) {
+      state.activePlacementIndex = index;
+      render();
+    }
+    return;
+  }
+
   // Place furniture on grid
   if (button.dataset.cell !== undefined) {
     if (state.feedback !== null) return;
 
-    const item = state.selection[
-      state.placements.length
-    ];
+    const selectionIndex = activePlacementIndex();
+    const item = state.selection[selectionIndex];
 
     const index = Number(button.dataset.cell);
 
     if (item && canPlace(item, index)) {
       state.placements.push({
+        selectionIndex,
         item: { ...item },
         cells: cellsFor(
           currentRoom(),
@@ -1802,6 +1828,7 @@ app.addEventListener("click", event => {
         )
       });
 
+      state.activePlacementIndex = null;
       render();
     }
 
@@ -1905,6 +1932,7 @@ app.addEventListener("click", event => {
   }
 
   if (action === "placement") {
+    state.activePlacementIndex = null;
     if (!canFitItems(state.selection)) {
       alert("These items no longer fit in the available cells.");
       state.placements = [];
@@ -1921,7 +1949,8 @@ app.addEventListener("click", event => {
   }
 
   if (action === "undo") {
-    state.placements.pop();
+    const placement = state.placements.pop();
+    state.activePlacementIndex = placement?.selectionIndex ?? null;
     render();
     return;
   }
