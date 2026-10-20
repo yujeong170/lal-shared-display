@@ -562,6 +562,47 @@ p {
   margin: 0 0 26px;
 }
 
+.daily-challenge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  margin: 20px 0 8px;
+  border-radius: 999px;
+  background: var(--olive);
+  color: #fffaf0;
+}
+
+.daily-challenge > div {
+  min-width: 0;
+}
+
+.daily-challenge strong,
+.daily-challenge > div > span {
+  display: block;
+}
+
+.daily-challenge strong {
+  font-size: 17px;
+}
+
+.daily-challenge > div > span {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.daily-challenge-progress {
+  flex-shrink: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.daily-bonus-message {
+  color: var(--olive-dark);
+  font-weight: 600;
+}
+
 .events-heading {
   padding-top: 10px;
   margin-bottom: 12px;
@@ -637,7 +678,7 @@ button {
 }
 
 .timer-track {
-  stroke: #FFE7E1;
+  stroke: #FFD0C6;
 }
 
 .timer-progress {
@@ -783,7 +824,7 @@ button {
 }
 
 #app .timer-track {
-  stroke: #FFE7E1;
+  stroke: #FFD0C6;
 }
 
 #app .timer-progress {

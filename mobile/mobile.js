@@ -148,6 +148,23 @@ const activeTable = joinedTable || saved.table || null;
 const activeRoom = TABLES[activeTable] || null;
 const isFirstVisit = !saved.hasReceivedWelcomePiece;
 
+function localDayKey() {
+  const date = new Date();
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function readDailyChallenge() {
+  const daily = saved.dailyChallenge;
+  if (daily?.date !== localDayKey()) {
+    return { date: localDayKey(), minutes: 0, rewarded: false };
+  }
+  return {
+    date: daily.date,
+    minutes: Number.isFinite(daily.minutes) ? Math.max(0, daily.minutes) : 0,
+    rewarded: daily.rewarded === true
+  };
+}
+
 let state = {
   page: "home",
   room: activeRoom,
@@ -168,6 +185,9 @@ let state = {
   puzzleComplete: false,
   timerMessage: null,
   earnedLastPiece: false,
+  dailyChallenge: readDailyChallenge(),
+  earnedDailyBonus: false,
+  showDailyBonus: false,
 
 occupied: Object.fromEntries(
   ROOMS.map(room => [room.id, []])
@@ -181,6 +201,7 @@ function saveProgress() {
       table: state.table,
       pieces: state.pieces,
       points: state.points,
+      dailyChallenge: state.dailyChallenge,
       occupied: state.occupied,
       hasTriedContribution: state.hasTriedContribution
     }));
@@ -195,6 +216,27 @@ function joinedRoom() {
   return ROOMS.find(
     room => room.id === TABLES[state.table]
   ) || null;
+}
+
+function dailyChallenge() {
+  if (state.dailyChallenge.date !== localDayKey()) {
+    state.dailyChallenge = { date: localDayKey(), minutes: 0, rewarded: false };
+    saveProgress();
+  }
+  return state.dailyChallenge;
+}
+
+function dailyChallengeCard() {
+  const daily = dailyChallenge();
+  return `
+    <div class="daily-challenge" aria-label="Daily study challenge">
+      <div>
+        <strong>Daily Challenge</strong>
+        <span>${daily.rewarded ? 'Completed! +1 point earned' : 'Study for an hour · +1 bonus point'}</span>
+      </div>
+      <span class="daily-challenge-progress">${Math.min(60, daily.minutes)}min / 60min</span>
+    </div>
+  `;
 }
 
 function currentRoom() {
@@ -334,6 +376,7 @@ function resetTimer() {
   timer.running = false;
   timer.endsAt = null;
   timer.mode = "study";
+  timer.studyMinutes = 15;
 
   timer.totalSeconds = TEST_MODE
     ? TEST_FOCUS_SECONDS
@@ -374,6 +417,14 @@ function finishTimer() {
   timer.endsAt = null;
 
   if (completedMode === "study") {
+    const daily = dailyChallenge();
+    daily.minutes += timer.studyMinutes;
+    state.earnedDailyBonus = !daily.rewarded && daily.minutes >= 60;
+    if (state.earnedDailyBonus) {
+      daily.rewarded = true;
+      state.points += 1;
+      state.showDailyBonus = true;
+    }
     const earned = state.pieces < 4;
 
     if (earned) {
@@ -859,6 +910,8 @@ function homePage() {
       </div>
     </div>
 
+    ${dailyChallengeCard()}
+
     ${timerCircle(
       timer.mode === "break" ? "View Break" : "Start Focus",
       timer.mode === "break" ? "show-break" : "toggle-timer"
@@ -867,7 +920,6 @@ function homePage() {
     <div class="timer-actions">
       <button
         data-action="reset-timer"
-        ${timer.mode === "break" ? "disabled" : ""}
       >
         Reset
       </button>
@@ -940,6 +992,8 @@ function focusPage() {
         FOCUS MODE · Stay focused
       </p>
 
+      ${dailyChallengeCard()}
+
       ${timerCircle(
         timer.running ? "Pause" : "Resume",
         "toggle-timer"
@@ -967,6 +1021,10 @@ function completePage() {
   return `
     <div class="card peach-card center completion-card">
       <h1>Focus Complete!</h1>
+
+      ${state.earnedDailyBonus
+        ? '<p class="daily-bonus-message">Daily Challenge complete! +1 bonus point</p>'
+        : ''}
 
       <h2>
         ${state.earnedLastPiece
@@ -1695,6 +1753,7 @@ function rewardsPage() {
 // ========================================
 
 function render() {
+  if (state.showDailyBonus && app.querySelector(".daily-bonus-overlay")) return;
   // Keep the open confirmation dialog mounted so background updates
   // do not replay its entrance animation or interrupt button focus.
   if (
@@ -1723,7 +1782,26 @@ function render() {
 
   app.innerHTML =
     page() +
-    (state.page === "focus" ? "" : bottomNav());
+    (state.page === "focus" ? "" : bottomNav()) +
+    (state.showDailyBonus ? `
+      <div class="contribution-overlay daily-bonus-overlay">
+        <div class="contribution-popup" role="dialog" aria-modal="true"
+          aria-labelledby="daily-bonus-title" aria-describedby="daily-bonus-description">
+          <div class="contribution-icon" aria-hidden="true">✓</div>
+          <h2 id="daily-bonus-title">Daily Challenge Complete!</h2>
+          <div class="contribution-points">+1 Bonus Point!</div>
+          <p id="daily-bonus-description">
+            You studied for 60 minutes today.<br>
+            Your bonus point has been added to your total!
+          </p>
+          ${primary("Got it!", "dismiss-daily-bonus")}
+        </div>
+      </div>
+    ` : "");
+
+  if (state.showDailyBonus) {
+    app.querySelector('[data-action="dismiss-daily-bonus"]').focus();
+  }
 
   updateTimerDisplay();
 }
@@ -1736,6 +1814,14 @@ app.addEventListener("click", event => {
   const button = event.target.closest("button");
 
   if (!button || button.disabled) return;
+
+  if (state.showDailyBonus) {
+    if (button.dataset.action === "dismiss-daily-bonus") {
+      state.showDailyBonus = false;
+      render();
+    }
+    return;
+  }
 
   // Navigation
   if (button.dataset.page) {
