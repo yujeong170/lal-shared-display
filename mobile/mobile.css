@@ -719,6 +719,24 @@ button {
   gap: 4px;
 }
 
+/* On larger screens, keep navigation next to the content. */
+@media (min-width: 481px) {
+  #app {
+    min-height: 0;
+    padding-bottom: 0;
+  }
+
+  #app .bottom-nav {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: calc(100% + 36px);
+    max-width: none;
+    margin: 24px -18px 0;
+  }
+}
+
 /* Pink track + shrinking green progress */
 #app .timer-circle {
   position: relative;
