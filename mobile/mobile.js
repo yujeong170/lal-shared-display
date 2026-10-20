@@ -494,10 +494,15 @@ function canFitShape(shape) {
   ]);
 }
 
+let previewRoomId = null;
+let roomPreviewTimeout = null;
+
 function navigate(page) {
   // Focus must be completed or ended first.
   if (state.page === "focus" && page !== "focus") return;
 
+  clearTimeout(roomPreviewTimeout);
+  previewRoomId = null;
   state.page = page;
   render();
   window.scrollTo(0, 0);
@@ -562,7 +567,7 @@ function pieceBalance() {
       className = "reserved";
     }
 
-    return `<span class="piece ${className}">✿</span>`;
+    return `<span class="piece ${className}"><span class="puzzle-icon" aria-hidden="true"></span></span>`;
   }).join("");
 
   return `
@@ -797,18 +802,18 @@ function homePage() {
 
   return `
     <div class="topbar">
-      <span>Mingodoro</span>
+      <strong>Mingodoro</strong>
 
       <div>
       <span class="stat">✪ ${state.points}</span>
-      <span class="stat">✿ ${state.pieces}/4</span>
+      <span class="stat"><span class="puzzle-icon" aria-hidden="true"></span> ${state.pieces}/4</span>
       </div>
     </div>
 
     ${!state.hasTriedContribution
       ? `
         <div class="card peach-card">
-          <h3>Welcome! Try Your First Contribution ✿</h3>
+          <h3>Welcome! Try Your First Contribution <span class="puzzle-icon" aria-hidden="true"></span></h3>
 
           <p>
             You received 1 free Puzzle Piece when you first
@@ -964,7 +969,7 @@ function completePage() {
 
       <h2>
         ${state.earnedLastPiece
-          ? "+1 Puzzle Piece ✿"
+          ? '+1 Puzzle Piece <span class="puzzle-icon" aria-hidden="true"></span>'
           : "Pieces Full · 4/4"}
       </h2>
 
@@ -1048,21 +1053,32 @@ function roomsPage() {
           <img src="../assets/house/house%20frame.PNG" alt="" />
         </div>
         <div class="grid-two rooms-list">
-      ${ROOMS.map(room => `
+      ${["balcony", "bathroom", "bedroom", "kitchen", "living2", "living1"].map(id => {
+        const room = ROOMS.find(room => room.id === id);
+        const total = room.cols * room.rows;
+        const occupied = state.occupied[room.id].length;
+        return `
         <button
-          class="option"
+          class="house-room"
           data-room="${room.id}"
+          aria-label="${room.name}${room.id === TABLES[state.table] ? ', your room' : ', view only preview'}"
         >
 ${roomPreview(room.id)}
-          <h3>${room.name}</h3>
-
-          ${roomProgress(room)}
-
-          ${room.id === TABLES[state.table]
-            ? '<span class="room-tag">YOUR ROOM</span>'
-            : ""}
+          <span class="house-room-overlay" ${previewRoomId === room.id ? '' : 'hidden'}>
+            <span>${room.name}<br>(View only)</span>
+            <span class="house-room-occupancy">
+              ${occupied} / ${total} cells occupied<br>
+              ${total - occupied} available
+            </span>
+            <span class="house-room-progress" role="progressbar"
+              aria-label="Occupied cells" aria-valuemin="0"
+              aria-valuemax="${total}" aria-valuenow="${occupied}">
+              <span style="width: ${(occupied / total) * 100}%"></span>
+            </span>
+          </span>
         </button>
-      `).join("")}
+      `;
+      }).join("")}
         </div>
       </div>
     </div>
@@ -1714,7 +1730,18 @@ app.addEventListener("click", event => {
 
   // Room selection (viewing does not change joined room)
   if (button.dataset.room) {
-    state.room = button.dataset.room;
+    const selectedRoomId = button.dataset.room;
+    if (selectedRoomId !== joinedRoom()?.id) {
+      clearTimeout(roomPreviewTimeout);
+      previewRoomId = selectedRoomId;
+      render();
+      roomPreviewTimeout = setTimeout(() => {
+        previewRoomId = null;
+        if (state.page === "rooms") render();
+      }, 2500);
+      return;
+    }
+    state.room = selectedRoomId;
     navigate("detail");
     return;
   }

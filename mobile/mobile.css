@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Preahvihear&display=swap');
 
 
 :root {
@@ -17,7 +17,7 @@
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Preahvihear', sans-serif;
   color: var(--text);
   background: #eaeaea;
 }
@@ -191,7 +191,7 @@ p {
 .shared-house-body {
   position: relative;
   margin-top: -16px;
-  padding: 20px 0 80px;
+  padding: 20px 0 34px;
 }
 
 .shared-house-body::before {
@@ -220,6 +220,72 @@ p {
 
 .rooms-list {
   position: relative;
+  gap: 8px;
+}
+
+.house-room {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.house-room .real-room-preview {
+  margin: 0;
+  border-radius: 0 !important;
+}
+
+.house-room:focus-visible {
+  outline: 2px solid var(--olive-dark);
+  outline-offset: 2px;
+}
+
+.house-room-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.48);
+  text-align: center;
+  font-size: clamp(9px, 2.8vw, 12px);
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.house-room-overlay[hidden] {
+  display: none;
+}
+
+.house-room-occupancy {
+  margin-top: 8px;
+}
+
+.house-room-progress {
+  display: block;
+  width: 44%;
+  height: 4px;
+  margin-top: 5px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(255, 249, 227, 0.35);
+}
+
+.house-room-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff9e3;
 }
 
 .option {
@@ -250,6 +316,16 @@ p {
 .piece {
   font-size: 27px;
   color: #c9c9c9;
+}
+
+.puzzle-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+  background-color: currentColor;
+  -webkit-mask: url("../assets/icon/puzzle.svg") center / contain no-repeat;
+  mask: url("../assets/icon/puzzle.svg") center / contain no-repeat;
 }
 
 .piece.available {
@@ -505,7 +581,7 @@ button,
 input,
 select,
 textarea {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Preahvihear', sans-serif;
 }
 
 h1, h2, h3 {
@@ -589,7 +665,7 @@ button {
 }
 
 .timer-time {
-  font-family: "Poppins", sans-serif;
+  font-family: "Preahvihear", sans-serif;
   font-size: 42px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -605,7 +681,7 @@ button {
   border-radius: 999px;
   background: #FECDBE;
   color: #302d29;
-  font-family: "Poppins", sans-serif;
+  font-family: "Preahvihear", sans-serif;
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
@@ -711,7 +787,7 @@ button {
 }
 
 #app .timer-time {
-  font-family: "Poppins", sans-serif;
+  font-family: "Preahvihear", sans-serif;
   font-size: 42px;
   font-weight: 600;
   line-height: 1.2;
@@ -727,7 +803,7 @@ button {
   border-radius: 999px;
   background: #ffd0c6;
   color: #302d29;
-  font: 600 15px "Poppins", sans-serif;
+  font: 600 15px "Preahvihear", sans-serif;
 }
 
 /* Focus-only screen */
