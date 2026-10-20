@@ -26,6 +26,7 @@ body {
 
 button {
   font: inherit;
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -169,12 +170,13 @@ p {
 
 .shared-house {
   margin-top: 28px;
+  clip-path: inset(0 -18px);
 }
 
 .shared-house-roof {
   position: relative;
-  width: calc(100% + 52px);
-  margin-inline: -26px;
+  width: calc(100% + 88px);
+  margin-inline: -44px;
   aspect-ratio: 1488 / 620;
   overflow: hidden;
   z-index: 1;
@@ -193,20 +195,20 @@ p {
 .shared-house-body {
   position: relative;
   margin-top: -16px;
-  padding: 20px 0 34px;
+  padding: 20px 0 46px;
 }
 
 .shared-house-body::before {
   content: "";
   position: absolute;
-  inset: 0 -9px 7%;
+  inset: 0 -13px 7%;
   background: white;
   pointer-events: none;
 }
 
 .shared-house-frame {
   position: absolute;
-  inset: 0 -14px;
+  inset: 0 -18px;
   overflow: hidden;
   pointer-events: none;
 }
