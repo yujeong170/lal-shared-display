@@ -9,6 +9,8 @@
   --peach: #ffd0c4;
   --pink: #ffe7e1;
   --text: #302b27;
+  --app-width: 390px;
+  --timer-size: 260px;
 }
 
 * {
@@ -34,7 +36,7 @@ button:disabled {
 
 
 #app {
-  width: min(100%, 390px);
+  width: min(100%, var(--app-width));
   min-height: 100dvh;
   margin: 0 auto;
   padding: 20px 18px 100px;
@@ -694,7 +696,7 @@ button {
 
 /* Global navigation */
 #app {
-  padding-bottom: 92px;
+  padding-bottom: calc(116px + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-nav {
@@ -702,7 +704,10 @@ button {
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
-  width: min(100%, 512px);
+  width: min(100%, var(--app-width));
+  max-width: none;
+  height: auto;
+  min-height: 84px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -717,23 +722,25 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  height: auto;
+  min-height: 56px;
+  justify-content: center;
+  line-height: 1.4;
 }
 
-/* On larger screens, keep navigation next to the content. */
+/* Let the content grow with wider screens. */
 @media (min-width: 481px) {
-  #app {
-    min-height: 0;
-    padding-bottom: 0;
+  :root {
+    --app-width: clamp(390px, 48vw, 640px);
+    --timer-size: clamp(260px, 27vw, 360px);
   }
 
-  #app .bottom-nav {
-    position: relative;
-    left: auto;
-    bottom: auto;
-    transform: none;
-    width: calc(100% + 36px);
-    max-width: none;
-    margin: 24px -18px 0;
+  body {
+    font-size: clamp(14px, 1.2vw, 18px);
+  }
+
+  #app .timer-time {
+    font-size: clamp(42px, 4vw, 56px);
   }
 }
 
@@ -743,12 +750,12 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 260px;
-  height: 260px;
-  min-width: 260px;
-  min-height: 260px;
-  max-width: 260px;
-  max-height: 260px;
+  width: var(--timer-size);
+  height: var(--timer-size);
+  min-width: var(--timer-size);
+  min-height: var(--timer-size);
+  max-width: var(--timer-size);
+  max-height: var(--timer-size);
   margin: 28px auto;
   padding: 0;
   border: 0;
