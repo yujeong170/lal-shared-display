@@ -637,12 +637,12 @@ function bottomNav() {
   return `
     <nav class="bottom-nav">
       <button data-page="home">
-        <span style="font-size:22px">⌂</span>
+        <span class="home-icon" aria-hidden="true"></span>
         <span>Home</span>
       </button>
       
 <button data-page="rewards">
-  <span style="font-size:22px">✪</span>
+  <span class="reward-icon" aria-hidden="true"></span>
   <span>Rewards</span>
 </button>
     </nav>
@@ -733,6 +733,9 @@ const ROOM_BACKGROUNDS = {
 };
 
 let sharedFurnitureRecords = [];
+let roomGenerations = {};
+let placementGeneration = null;
+let placementRequestId = null;
 
 
 function roomPreview(roomId) {
@@ -857,7 +860,7 @@ function homePage() {
       <strong>Mingodoro</strong>
 
       <div>
-      <span class="stat">✪ ${state.points}</span>
+      <span class="stat"><span class="reward-icon" aria-hidden="true"></span> ${state.points}</span>
       <span class="stat"><span class="puzzle-icon" aria-hidden="true"></span> ${state.pieces}/4</span>
       </div>
     </div>
@@ -1741,7 +1744,7 @@ function rewardsPage() {
         >
           <span class="reward-name">${reward.name}</span>
           <span class="reward-cost">
-            ${reward.cost} ✪
+            ${reward.cost} <span class="reward-icon" aria-hidden="true"></span>
           </span>
         </button>
       `).join("")}
@@ -1814,6 +1817,11 @@ app.addEventListener("click", event => {
   const button = event.target.closest("button");
 
   if (!button || button.disabled) return;
+  if (window.isSavingPlacement) return;
+  if (placementRequestId && button.dataset.action !== "confirm") {
+    alert("Please retry Confirm first so we can check whether your previous placement was saved.");
+    return;
+  }
 
   if (state.showDailyBonus) {
     if (button.dataset.action === "dismiss-daily-bonus") {
@@ -1904,6 +1912,7 @@ app.addEventListener("click", event => {
     const index = Number(button.dataset.cell);
 
     if (item && canPlace(item, index)) {
+      placementRequestId = null;
       state.placements.push({
         selectionIndex,
         item: { ...item },
@@ -2018,6 +2027,12 @@ app.addEventListener("click", event => {
   }
 
   if (action === "placement") {
+    if (!Number.isInteger(roomGenerations[state.room])) {
+      alert("Room data is still loading. Please try again shortly.");
+      return;
+    }
+    placementGeneration = roomGenerations[state.room];
+    placementRequestId = null;
     state.activePlacementIndex = null;
     if (!canFitItems(state.selection)) {
       alert("These items no longer fit in the available cells.");
@@ -2035,6 +2050,7 @@ app.addEventListener("click", event => {
   }
 
   if (action === "undo") {
+    placementRequestId = null;
     const placement = state.placements.pop();
     state.activePlacementIndex = placement?.selectionIndex ?? null;
     render();
@@ -2081,77 +2097,55 @@ if (action === "confirm") {
   // Prevent repeated submissions.
   if (window.isSavingPlacement) return;
   window.isSavingPlacement = true;
+  placementRequestId ||= crypto.randomUUID();
 
   // Save furniture to Supabase.
   (async () => {
     try {
-      const { data: existing, error: readError } =
-        await supabaseClient
-          .from("furniture_placements")
-          .select("cells")
-          .eq("room_id", roomId);
-
-      if (readError) throw readError;
-
-      const occupiedNow = new Set(
-        (existing || []).flatMap(row => row.cells)
-      );
-
-      const hasConflict = furnitureData.some(item =>
-        item.cells.some(cell => occupiedNow.has(cell))
-      );
-
-      if (hasConflict) {
-        alert(
-          "Someone has already placed furniture here. Please try another position."
-        );
+      const { data: result, error } = await supabaseClient.rpc("confirm_placements", {
+        p_room_id: roomId,
+        p_generation: placementGeneration,
+        p_request_id: placementRequestId,
+        p_items: furnitureData
+      });
+      if (error) throw error;
+      if (result.status === "conflict" || result.status === "stale_round") {
+        const stale = result.status === "stale_round";
+        state.placements = [];
+        state.activePlacementIndex = null;
+        placementRequestId = null;
+        // Reload a consistent snapshot before allowing another placement.
+        window.isSavingPlacement = false;
+        await syncOccupiedCells();
+        placementGeneration = roomGenerations[roomId];
+        alert(stale
+          ? "Another user filled the last cell. The room has restarted. Please place your furniture again. Your Pieces and Points are unchanged."
+          : "Someone placed furniture here first. Please choose another position. Your Pieces and Points are unchanged.");
+        render();
         return;
       }
-
-      const { error } = await supabaseClient
-        .from("furniture_placements")
-        .insert(furnitureData);
-
-      if (error) throw error;
-
-      furnitureData.forEach(item =>
-        item.cells.forEach(cell => occupiedNow.add(cell))
-      );
+      if (result.status !== "ok") throw new Error("Unexpected placement result");
 
       // Only update points after successful saving.
-      state.occupied[roomId] = [...occupiedNow];
+      state.occupied[roomId] = result.occupied;
+      roomGenerations[roomId] = result.generation;
 
       state.pieces -= cost;
       state.points += cost;
 
       state.hasTriedContribution = true;
 
-      const room = ROOMS.find(item => item.id === roomId);
-      const puzzleComplete =
-        occupiedNow.size >= room.cols * room.rows;
-      let puzzleWasReset = false;
-
-      if (puzzleComplete) {
-        const { error: resetError } = await supabaseClient
-          .from("furniture_placements")
-          .delete()
-          .eq("room_id", roomId);
-
-        if (resetError) {
-          console.error("Could not reset completed room:", resetError);
-        } else {
-          state.occupied[roomId] = [];
-          puzzleWasReset = true;
+      if (result.completed) {
           sharedFurnitureRecords = sharedFurnitureRecords.filter(
             record => record.room_id !== roomId
           );
-        }
       }
 
       saveProgress();
 
       state.feedback = cost;
-      state.puzzleComplete = puzzleWasReset;
+      state.puzzleComplete = result.completed;
+      placementRequestId = null;
       state.selection = [];
       state.placements = [];
 
@@ -2160,7 +2154,7 @@ if (action === "confirm") {
     } catch (error) {
       console.error("Supabase save error:", error);
       alert(
-        "Could not save furniture. Please try again."
+        "Could not confirm placement. Please retry without changing your placement."
       );
     } finally {
       window.isSavingPlacement = false;
@@ -2235,36 +2229,12 @@ async function syncOccupiedCells() {
   isLoadingOccupied = true;
 
   try {
-const { data, error } = await supabaseClient
-  .from("furniture_placements")
-  .select("room_id, furniture_id, cells");
+const { data, error } = await supabaseClient.rpc("house_snapshot");
     if (error) throw error;
+    if (window.isSavingPlacement) return;
 
-    let activeRecords = data || [];
-
-    for (const room of ROOMS) {
-      const filledCells = new Set(
-        activeRecords
-          .filter(record => record.room_id === room.id)
-          .flatMap(record => record.cells)
-      );
-
-      if (filledCells.size < room.cols * room.rows) continue;
-
-      const { error: resetError } = await supabaseClient
-        .from("furniture_placements")
-        .delete()
-        .eq("room_id", room.id);
-
-      if (resetError) {
-        console.error("Could not reset completed room:", resetError);
-        continue;
-      }
-
-      activeRecords = activeRecords.filter(
-        record => record.room_id !== room.id
-      );
-    }
+    const activeRecords = data.placements;
+    roomGenerations = data.rounds;
 
     // Start with empty cells for all six rooms.
     const updatedOccupied = Object.fromEntries(
