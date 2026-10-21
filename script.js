@@ -406,6 +406,7 @@ function displaySavedFurniture(record) {
   roomGrid.appendChild(furniture);
 
   indices.forEach(index => occupied.add(index));
+  return furniture;
 }
 
 let displayedGeneration = null;
@@ -417,15 +418,41 @@ completionOverlay.setAttribute("role", "status");
 completionOverlay.setAttribute("aria-live", "polite");
 screen.appendChild(completionOverlay);
 
-function renderSharedFurniture(records) {
+const furnitureRecordKey = record => JSON.stringify([record.furniture_id, record.cells]);
+
+async function renderSharedFurniture(records, revealNew = false) {
+  const previous = new Set(visibleRecords.map(furnitureRecordKey));
   roomGrid.querySelectorAll(".supabase-furniture").forEach(element => element.remove());
   occupied.clear();
-  records.forEach(displaySavedFurniture);
+  const reveals = records.map(async record => {
+    const furniture = displaySavedFurniture(record);
+    if (!furniture || !revealNew || previous.has(furnitureRecordKey(record))) return;
+    const silhouette = furniture.cloneNode();
+    silhouette.alt = '';
+    silhouette.setAttribute('aria-hidden', 'true');
+    silhouette.style.filter = 'brightness(0)';
+    furniture.after(silhouette);
+    try {
+      await furniture.decode();
+      if (!furniture.isConnected) return;
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        await silhouette.animate([
+          { clipPath: 'inset(0 0 0% 0)' },
+          { clipPath: 'inset(0 0 100% 0)' }
+        ], { duration: 1100, easing: 'ease-in-out', fill: 'forwards' }).finished;
+      }
+    } catch (_) {
+      // Always leave the confirmed color image visible if animation fails.
+    } finally {
+      silhouette.remove();
+    }
+  });
   clearPreview();
+  await Promise.all(reveals);
 }
 
 async function celebrateCompletion(records) {
-  renderSharedFurniture(records);
+  await renderSharedFurniture(records, true);
   completionOverlay.innerHTML = '<span class="completion-message">PUZZLE COMPLETE !</span>' +
     Array.from({ length: 12 }, (_, i) =>
       `<span class="completion-sparkle" aria-hidden="true" style="--x:${18 + (i * 17 % 66)}%;--y:${18 + (i * 23 % 60)}%;--delay:${(i % 4) * 140}ms">✦</span>`
@@ -454,9 +481,9 @@ async function loadSharedFurniture() {
       const completed = data.completions?.[databaseRoomId];
       await celebrateCompletion(completed?.length ? completed : visibleRecords);
     }
+    await renderSharedFurniture(records, displayedGeneration !== null && generation === displayedGeneration);
     displayedGeneration = generation;
     visibleRecords = records;
-    renderSharedFurniture(records);
 
   } catch (error) {
     console.error(

@@ -1517,6 +1517,7 @@ const draftFurniture = state.placements
       <img
         src="${imageUrl}"
         alt="${furniture.name} silhouette"
+        class="draft-furniture-silhouette"
         style="
           position: absolute;
           left: ${(startCol / room.cols) * 100}%;
@@ -2139,9 +2140,34 @@ if (action === "confirm") {
           sharedFurnitureRecords = sharedFurnitureRecords.filter(
             record => record.room_id !== roomId
           );
+      } else {
+        sharedFurnitureRecords.push(...furnitureData);
       }
 
       saveProgress();
+
+      // Keep the confirmed drafts on screen until their black layer wipes upward.
+      const silhouettes = [...app.querySelectorAll('.draft-furniture-silhouette')];
+      await Promise.all(silhouettes.map(async silhouette => {
+        const color = silhouette.cloneNode();
+        color.classList.remove('draft-furniture-silhouette');
+        color.alt = silhouette.alt.replace(/ silhouette$/, '');
+        color.style.filter = 'none';
+        silhouette.before(color);
+        try {
+          await color.decode();
+          if (!silhouette.isConnected) return;
+          if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            await silhouette.animate([
+              { clipPath: 'inset(0 0 0% 0)' },
+              { clipPath: 'inset(0 0 100% 0)' }
+            ], { duration: 1100, easing: 'ease-in-out', fill: 'forwards' }).finished;
+          }
+        } catch (_) {
+          // Image or animation interruption must not affect a saved placement.
+        }
+        silhouette.remove();
+      }));
 
       state.feedback = cost;
       state.puzzleComplete = result.completed;
