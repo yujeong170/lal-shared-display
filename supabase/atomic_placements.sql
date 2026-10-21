@@ -7,6 +7,7 @@ create table if not exists public.room_rounds (
   capacity integer not null,
   generation bigint not null default 0
 );
+alter table public.room_rounds add column if not exists completed_placements jsonb not null default '[]'::jsonb;
 insert into public.room_rounds (room_id, capacity) values
   ('balcony',24), ('bathroom',25), ('bedroom',32),
   ('kitchen',25), ('living1',40), ('living2',36)
@@ -28,6 +29,7 @@ returns jsonb language sql stable security definer
 set search_path = public, pg_temp as $$
   select jsonb_build_object(
     'rounds', (select jsonb_object_agg(room_id, generation) from public.room_rounds),
+    'completions', (select jsonb_object_agg(room_id, completed_placements) from public.room_rounds),
     'placements', coalesce((select jsonb_agg(jsonb_build_object(
       'room_id', room_id, 'furniture_id', furniture_id, 'cells', cells
     )) from public.furniture_placements), '[]'::jsonb)
@@ -92,6 +94,10 @@ begin
   end loop;
   completed := cardinality(used) + cardinality(proposed) >= room.capacity;
   if completed then
+    update public.room_rounds set completed_placements = (
+      select jsonb_agg(jsonb_build_object('furniture_id', furniture_id, 'cells', cells))
+      from public.furniture_placements where room_id = p_room_id
+    ) where room_id = p_room_id;
     delete from public.furniture_placements where room_id = p_room_id;
     update public.room_rounds set generation = generation + 1 where room_id = p_room_id;
   end if;

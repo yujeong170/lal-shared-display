@@ -408,33 +408,63 @@ function displaySavedFurniture(record) {
   indices.forEach(index => occupied.add(index));
 }
 
-// Load all saved furniture for this room.
-async function loadSharedFurniture() {
+let displayedGeneration = null;
+let loadingSharedFurniture = false;
+let visibleRecords = [];
+const completionOverlay = document.createElement("div");
+completionOverlay.className = "completion-overlay";
+completionOverlay.setAttribute("role", "status");
+completionOverlay.setAttribute("aria-live", "polite");
+screen.appendChild(completionOverlay);
+
+function renderSharedFurniture(records) {
+  roomGrid.querySelectorAll(".supabase-furniture").forEach(element => element.remove());
+  occupied.clear();
+  records.forEach(displaySavedFurniture);
+  clearPreview();
+}
+
+async function celebrateCompletion(records) {
+  renderSharedFurniture(records);
+  completionOverlay.innerHTML = '<span class="completion-message">PUZZLE COMPLETE !</span>' +
+    Array.from({ length: 12 }, (_, i) =>
+      `<span class="completion-sparkle" aria-hidden="true" style="--x:${18 + (i * 17 % 66)}%;--y:${18 + (i * 23 % 60)}%;--delay:${(i % 4) * 140}ms">✦</span>`
+    ).join("");
+  screen.classList.add("is-completing");
   try {
-    const { data, error } = await supabaseClient
-      .from("furniture_placements")
-      .select("id, room_id, furniture_id, cells")
-      .eq("room_id", databaseRoomId);
+    await new Promise(resolve => setTimeout(resolve, 2800));
+  } finally {
+    screen.classList.remove("is-completing");
+    completionOverlay.replaceChildren();
+  }
+}
+
+// Read generation and furniture together so completion is detected even after reset.
+async function loadSharedFurniture() {
+  if (loadingSharedFurniture) return;
+  loadingSharedFurniture = true;
+  try {
+    const { data, error } = await supabaseClient.rpc("house_snapshot");
 
     if (error) throw error;
 
-    // Remove previously loaded Supabase furniture.
-    document
-      .querySelectorAll(".supabase-furniture")
-      .forEach(element => element.remove());
-
-    occupied.clear();
-
-    // Display the latest saved furniture.
-    (data || []).forEach(displaySavedFurniture);
-
-    clearPreview();
+    const generation = data.rounds[databaseRoomId];
+    const records = data.placements.filter(record => record.room_id === databaseRoomId);
+    if (displayedGeneration !== null && generation > displayedGeneration) {
+      const completed = data.completions?.[databaseRoomId];
+      await celebrateCompletion(completed?.length ? completed : visibleRecords);
+    }
+    displayedGeneration = generation;
+    visibleRecords = records;
+    renderSharedFurniture(records);
 
   } catch (error) {
     console.error(
       "Could not load shared furniture:",
       error
     );
+  } finally {
+    loadingSharedFurniture = false;
   }
 }
 

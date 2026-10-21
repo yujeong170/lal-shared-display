@@ -1,6 +1,18 @@
 # lal-shared-display
 Shared display prototype for LAL
 
+## Shared display completion animation
+
+The display watches `house_snapshot` round generations and celebrates a new
+completion for 2.8 seconds with centered, unboxed “PUZZLE COMPLETE !” text, a warm glow, sparkles,
+and a furniture fade. Opening a display does not replay old completions.
+Reduced-motion preferences disable movement and sparkles.
+
+Re-run `supabase/atomic_placements.sql` before using this change. It preserves
+the last completed furniture layout on each room row, including the final
+placement, so the display can show it after the atomic reset. Without the
+updated migration, the animation uses the last visible layout instead.
+
 ## Atomic placement setup
 
 Before deploying the updated mobile app, run `supabase/atomic_placements.sql`

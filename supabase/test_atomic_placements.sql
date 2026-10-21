@@ -17,6 +17,8 @@ begin
   assert result->>'status' = 'ok' and (result->>'completed')::boolean;
   assert (select generation = 1 from public.room_rounds where room_id = 'balcony');
   assert not exists(select 1 from public.furniture_placements where room_id = 'balcony');
+  assert jsonb_array_length(public.house_snapshot()->'completions'->'balcony') = 2,
+    'Completion snapshot must retain the final placement as well as existing furniture';
   replay := public.confirm_placements('balcony',0,
     '00000000-0000-4000-8000-000000000001',
     '[{"furniture_id":"balcony-plant-1","cells":[23]}]');
