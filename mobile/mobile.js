@@ -129,8 +129,16 @@ const TABLES = {
 };
 
 const params = new URLSearchParams(window.location.search);
-const initialTable = params.get("table");
-const joinedTable = TABLES[initialTable] ? initialTable : null;
+function tableFromParams(searchParams) {
+  const table = searchParams.get('table');
+  const room = searchParams.get('room');
+  const roomTable = Object.keys(TABLES).find(id => TABLES[id] === room);
+  if (table !== null && !TABLES[table]) return null;
+  if (room !== null && !roomTable) return null;
+  if (table && roomTable && table !== roomTable) return null;
+  return table || roomTable || null;
+}
+const joinedTable = tableFromParams(params);
 
 // Browser-only prototype storage.
 const STORAGE_KEY = "lal_mobile_v3";
@@ -144,9 +152,9 @@ function readSaved() {
 }
 
 const saved = readSaved();
-const activeTable = joinedTable || saved.table || null;
+// Room membership comes from this visit's QR link, never saved progress.
+const activeTable = joinedTable;
 const activeRoom = TABLES[activeTable] || null;
-const isFirstVisit = !saved.hasReceivedWelcomePiece;
 
 function localDayKey() {
   const date = new Date();
@@ -166,16 +174,14 @@ function readDailyChallenge() {
 }
 
 let state = {
-  page: "home",
+  page: joinedTable ? "detail" : "home",
   room: activeRoom,
   table: activeTable,
 
-  // One welcome piece, only on first visit.
-  pieces: Number.isFinite(saved.pieces) ? saved.pieces : 1,
+  // Pieces are earned by completing focus sessions.
+  pieces: Number.isFinite(saved.pieces) ? saved.pieces : 0,
   points: Number.isFinite(saved.points) ? saved.points : 0,
 
-  hasTriedContribution: Boolean(saved.hasTriedContribution),
-  showWelcome: isFirstVisit,
 
   selectedShape: null,
   selection: [],
@@ -197,13 +203,10 @@ occupied: Object.fromEntries(
 function saveProgress() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      hasReceivedWelcomePiece: true,
-      table: state.table,
       pieces: state.pieces,
       points: state.points,
       dailyChallenge: state.dailyChallenge,
-      occupied: state.occupied,
-      hasTriedContribution: state.hasTriedContribution
+      occupied: state.occupied
     }));
   } catch (error) {
     console.warn("Could not save progress", error);
@@ -552,6 +555,7 @@ let roomPreviewTimeout = null;
 function navigate(page) {
   // Focus must be completed or ended first.
   if (state.page === "focus" && page !== "focus") return;
+  stopScanner();
 
   clearTimeout(roomPreviewTimeout);
   previewRoomId = null;
@@ -851,9 +855,14 @@ function roomPreview(roomId) {
   `;
 }
 
-function homePage() {
+function studyPage() {
+  return homePage(true);
+}
+
+function homePage(studyOnly = false) {
   // Always use the JOINED room, not the last viewed room.
   const room = joinedRoom();
+  if (!room && !studyOnly) return welcomePage();
 
   return `
     <div class="topbar">
@@ -865,32 +874,12 @@ function homePage() {
       </div>
     </div>
 
-    ${!state.hasTriedContribution
-      ? `
-        <div class="card peach-card">
-          <h3>Welcome! Try Your First Contribution <span class="puzzle-icon" aria-hidden="true"></span></h3>
-
-          <p>
-            You received 1 free Puzzle Piece when you first
-            joined. Use it to place furniture, then study
-            to earn more.
-          </p>
-
-          ${room
-            ? primary(
-                "Try Your First Contribution →",
-                "try-contribution",
-                state.pieces === 0
-              )
-            : `
-              <p class="small">
-                Scan the QR code on your table's
-                Shared Display to join a room.
-              </p>
-            `}
-        </div>
-      `
-      : ""}
+    <div class="journey-intro">
+      <span class="room-tag">${room ? 'YOUR ROOM · ' + room.name : 'FOCUS TIME'}</span>
+      <h1>Focus together.<br>Build a shared home.</h1>
+      <p>Start a focus session to earn a Puzzle Piece. ${room ? 'Use your Pieces to add furniture to ' + room.name + '.' : 'Join a room when you’re ready to furnish the house.'}</p>
+      <p class="small">${TEST_MODE ? 'Demo mode · Focus and break sessions last 3 seconds.' : 'Complete 15–45 minutes of focus to earn 1 Piece.'}</p>
+    </div>
 
     <div class="timer-settings">
       <strong>Focus Duration</strong>
@@ -938,49 +927,9 @@ function homePage() {
 
     <div class="section-heading events-heading">
       <h2>Events</h2>
-
-      <button
-        class="back"
-        data-page="rooms"
-        style="font-size:13px"
-      >
-        View All →
-      </button>
     </div>
 
-    ${room
-      ? `
-        <div class="card peach-card">
-          <span class="room-tag">
-            YOUR TABLE · ${state.table}
-          </span>
-
-<div style="margin:14px 0">
-  ${roomPreview(room.id)}
-</div>
-          <h3>${room.name}</h3>
-
-          <p>Contribute to your shared room.</p>
-
-          ${roomProgress(room)}
-
-          ${primary("View Your Room →", "open-room")}
-        </div>
-      `
-      : `
-        <div class="card peach-card">
-          <h3>Join a Shared Room</h3>
-
-          <p>
-            Scan the QR code on your table's Shared Display
-            to join its room.
-          </p>
-
-          <p class="small">
-            You can use the study timer without joining a room.
-          </p>
-        </div>
-      `}
+    ${eventHouseCard()}
   `;
 }
 
@@ -1096,14 +1045,14 @@ function breakPage() {
 // 8. ALL ROOMS
 // ========================================
 
-function roomsPage() {
+function roomsPage(houseOnly = false) {
   return `
-    ${backButton("home")}
+    ${houseOnly ? '' : backButton("home")}
 
-    <h1 class="center">Shared House</h1>
+    ${houseOnly ? '' : '<h1 class="center">Shared House</h1>'}
 
     <p class="center small">
-      6 rooms, built together
+      6 rooms, built together · Tap a room to explore
     </p>
 
     <div class="shared-house">
@@ -1144,7 +1093,150 @@ ${roomPreview(room.id)}
         </div>
       </div>
     </div>
+    ${houseOnly ? '' : (!joinedRoom() ? primary('Scan QR to Join', 'scan-qr') : primary('View Your Room →', 'open-room'))}
   `;
+}
+
+function eventHouseCard() {
+  const room = joinedRoom();
+  return `
+    <section class="card peach-card welcome-house" aria-label="Shared house event">
+      <h2 class="center">Build our shared house</h2>
+      <p class="center small">Focus together. Earn Pieces. Add furniture.</p>
+      ${roomsPage(true)}
+      ${room ? `
+        <div class="event-room-summary">
+          <span class="room-tag">YOUR ROOM · ${room.name}</span>
+          ${roomProgress(room)}
+          ${primary('View Your Room →', 'open-room')}
+        </div>
+        <p class="small center">Moving tables? Scan your new table’s QR to join its room.</p>
+        <button class="secondary" data-action="scan-qr">Scan QR to Change Room</button>
+      ` : `
+        <p class="center">Find an available table, take a seat, and scan the QR code on its shared screen.</p>
+        ${primary('Scan QR to Join', 'scan-qr')}
+        <p class="small center">After joining, complete a focus session to earn your first Puzzle Piece.</p>
+      `}
+    </section>`;
+}
+
+function welcomePage() {
+  return `
+    <div class="topbar"><strong>Mingodoro</strong><span class="room-tag">SHARED HOUSE</span></div>
+    <div class="journey-intro center">
+      <h1>Focus together.<br>Build a shared home.</h1>
+      <p>Turn your focus time into furniture.<br>Help the people at your table complete a room.</p>
+    </div>
+    <ol class="journey-steps" aria-label="How it works">
+      <li><b>1</b><span>Join a room<small>Scan your table’s QR</small></span></li>
+      <li><b>2</b><span>Focus<small>Earn Puzzle Pieces</small></span></li>
+      <li><b>3</b><span>Furnish<small>Build together</small></span></li>
+    </ol>
+    <div class="section-heading events-heading"><h2>Events</h2></div>
+    ${eventHouseCard()}
+    <button class="secondary" data-page="study">Just focus for now →</button>
+  `;
+}
+
+let scannerStream = null;
+let scannerFrame = null;
+let scannerSession = 0;
+
+function stopScanner() {
+  scannerSession++;
+  cancelAnimationFrame(scannerFrame);
+  scannerStream?.getTracks().forEach(track => track.stop());
+  scannerStream = null;
+}
+
+function scanPage() {
+  return `${backButton('home')}
+    <h1>Join your table’s room</h1>
+    <p>Point your camera at the QR code on your table’s shared screen.</p>
+    <video id="qr-video" class="qr-video" autoplay muted playsinline aria-label="QR camera preview"></video>
+    <p id="scan-status" class="small" role="status" aria-live="polite">Ready to scan.</p>
+    ${primary('Open Camera', 'open-camera')}
+    <div class="card qr-fallback">
+      <h2>Have the QR link?</h2>
+      <label for="qr-link">Paste the link from your table’s QR code</label>
+      <input id="qr-link" type="text" inputmode="url" placeholder="Paste your table’s QR link" autocomplete="off" aria-describedby="scan-status">
+      ${primary('Join from Link', 'join-link')}
+      <p class="small">You can also scan with your phone’s Camera app and open the link.</p>
+    </div>`;
+}
+
+function joinFromQr(value) {
+  let url;
+  try { url = new URL(value.trim(), location.href); } catch { return false; }
+  const table = tableFromParams(url.searchParams);
+  // Printed QR links can point to the hosted copy while this app is previewed
+  // on localhost. Read only the table ID; never navigate to the supplied URL.
+  const isMobilePage = url.pathname.endsWith('/mobile/mobile.html');
+  const isCurrentPage = url.origin === location.origin && url.pathname === location.pathname;
+  const appRoot = new URL('../', location.href);
+  const isHousePage = [appRoot.pathname, appRoot.pathname + 'index.html'].includes(url.pathname) &&
+    (url.origin === location.origin || url.origin === 'https://yujeong170.github.io');
+  const validProtocol = ['https:', 'http:'].includes(url.protocol) ||
+    (url.protocol === 'file:' && location.protocol === 'file:');
+  if (!validProtocol || (!isMobilePage && !isCurrentPage && !isHousePage) || !table) return false;
+  stopScanner();
+  state.table = table;
+  state.room = TABLES[table];
+  state.selection = [];
+  state.placements = [];
+  saveProgress();
+  const currentUrl = new URL(location.href);
+  currentUrl.searchParams.delete('room');
+  currentUrl.searchParams.set('table', table);
+  try { history.replaceState(null, '', currentUrl); } catch {
+    // Local-file previews may disallow history changes; joining still works.
+  }
+  navigate('detail');
+  return true;
+}
+
+async function startScanner() {
+  stopScanner();
+  const session = scannerSession;
+  const status = document.getElementById('scan-status');
+  if (!navigator.mediaDevices?.getUserMedia || !window.jsQR) {
+    status.textContent = 'Camera scanning is unavailable. Use your phone’s Camera app or paste the QR link below.';
+    return;
+  }
+  status.textContent = 'Allow camera access to scan your table’s QR.';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}, audio: false});
+    if (session !== scannerSession || state.page !== 'scan') {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+    scannerStream = stream;
+    const video = document.getElementById('qr-video');
+    video.srcObject = stream;
+    await video.play();
+    if (session !== scannerSession) return;
+    status.textContent = 'Looking for your table’s QR code…';
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d', {willReadFrequently: true});
+    const scan = () => {
+      if (session !== scannerSession) return;
+      if (video.readyState >= 2 && video.videoWidth) {
+        canvas.width = Math.min(640, video.videoWidth);
+        canvas.height = Math.round(canvas.width * video.videoHeight / video.videoWidth);
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = window.jsQR(frame.data, frame.width, frame.height);
+        if (code && joinFromQr(code.data)) return;
+        if (code) status.textContent = 'This QR is not for this house. Scan your table’s room QR.';
+      }
+      scannerFrame = requestAnimationFrame(scan);
+    };
+    scan();
+  } catch {
+    if (session !== scannerSession) return;
+    stopScanner();
+    status.textContent = 'Could not open the camera. Allow camera access, try again, or paste the QR link below.';
+  }
 }
 
 // ========================================
@@ -1182,13 +1274,16 @@ function detailPage() {
   ${roomPreview(room.id)}
 </div>
     <p>
-      Contribute furniture to complete this shared space.
+      ${isMyRoom ? `You’re joined to ${room.name}. Focus to earn Pieces, then add furniture together.` : 'Contribute furniture to complete this shared space.'}
     </p>
 
     <div class="card">
       <h3>Room Progress</h3>
       ${roomProgress(room)}
     </div>
+
+    ${isMyRoom ? `<button class="primary" data-page="study">Start Focus →</button>
+      <p class="small center">${state.pieces ? 'You have ' + state.pieces + ' Piece(s). You can also try furnishing now.' : 'Complete a focus session to earn 1 Puzzle Piece.'}</p>` : ''}
 
     ${isMyRoom
       ? primary(
@@ -1757,6 +1852,7 @@ function rewardsPage() {
 // ========================================
 
 function render() {
+  if (state.page === 'scan' && app.querySelector('#qr-video')) return;
   if (state.showDailyBonus && app.querySelector(".daily-bonus-overlay")) return;
   // Keep the open confirmation dialog mounted so background updates
   // do not replay its entrance animation or interrupt button focus.
@@ -1770,6 +1866,8 @@ function render() {
 
   const pages = {
     home: homePage,
+    study: studyPage,
+    scan: scanPage,
     focus: focusPage,
     "focus-complete": completePage,
     break: breakPage,
@@ -1838,6 +1936,22 @@ app.addEventListener("click", event => {
     return;
   }
 
+  if (button.dataset.action === 'scan-qr') {
+    navigate('scan');
+    startScanner();
+    return;
+  }
+  if (button.dataset.action === 'open-camera') {
+    startScanner();
+    return;
+  }
+  if (button.dataset.action === 'join-link') {
+    if (!joinFromQr(document.getElementById('qr-link').value.trim())) {
+      document.getElementById('scan-status').textContent = 'Paste your table’s QR link, such as …/?room=balcony or …/mobile/mobile.html?table=01.';
+    }
+    return;
+  }
+
   // Room selection (viewing does not change joined room)
   if (button.dataset.room) {
     const selectedRoomId = button.dataset.room;
@@ -1847,7 +1961,7 @@ app.addEventListener("click", event => {
       render();
       roomPreviewTimeout = setTimeout(() => {
         previewRoomId = null;
-        if (state.page === "rooms") render();
+        if (state.page === "rooms" || state.page === "home") render();
       }, 2500);
       return;
     }
@@ -1933,11 +2047,8 @@ app.addEventListener("click", event => {
 
   const action = button.dataset.action;
 
-  // First trial / break contribution
-  if (
-    action === "try-contribution" ||
-    action === "break-contribute"
-  ) {
+  // Break contribution
+  if (action === "break-contribute") {
     if (!joinedRoom() || state.pieces === 0) return;
 
     state.room = joinedRoom().id;
@@ -1987,7 +2098,8 @@ app.addEventListener("click", event => {
   // Always open the JOINED room.
   if (action === "open-room") {
     if (!joinedRoom()) {
-      navigate("home");
+      navigate("scan");
+      startScanner();
       return;
     }
 
@@ -2133,8 +2245,6 @@ if (action === "confirm") {
 
       state.pieces -= cost;
       state.points += cost;
-
-      state.hasTriedContribution = true;
 
       if (result.completed) {
           sharedFurnitureRecords = sharedFurnitureRecords.filter(
@@ -2308,7 +2418,10 @@ setInterval(syncOccupiedCells, 3000);
 
 // Sync when returning to the browser tab.
 document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopScanner();
   if (!document.hidden) {
     syncOccupiedCells();
   }
 });
+
+window.addEventListener('pagehide', stopScanner);

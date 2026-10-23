@@ -1,6 +1,37 @@
 # lal-shared-display
 Shared display prototype for LAL
 
+## Mobile entry and room joining
+
+Open `mobile/mobile.html` without a table parameter to see the shared house,
+the Join → Focus → Furnish introduction, and the QR join button. Previously
+saved tables do not join a room; each plain app entry requires a table QR.
+A QR URL such as
+`mobile/mobile.html?table=01` opens the joined room with its next actions.
+Tables 01–06 map to the existing six rooms.
+New users start with 0 Puzzle Pieces and earn them by completing focus sessions;
+there is no free welcome Piece. Existing saved balances are preserved.
+
+The in-app camera uses jsQR 1.4.0 from jsDelivr. Serve over HTTPS (or localhost)
+and allow camera access. A pasted QR URL must point to the current page or
+end in `/mobile/mobile.html`, with a valid table 01–06. Hosted QR links also
+work in local previews; only the table is read, with no external navigation.
+Relative links and `?table=01` are also accepted. Phone Camera app scanning remains
+available when in-app scanning cannot run. Camera tracks stop on navigation,
+successful joining, or when the browser tab becomes hidden.
+
+Existing room QR links such as
+`https://yujeong170.github.io/lal-shared-display/?room=balcony` also work
+when scanned or pasted inside the mobile app. The `room` parameter maps to
+the same six room IDs as the shared display. Mobile URLs can use either
+`room` or `table`; contradictory parameters are rejected. The repository
+root remains the shared display when opened directly.
+
+Joining retains the existing browser-local prototype behavior; it does not
+reserve a physical seat or track live participant counts. Room progress shows
+occupied puzzle cells. The existing 3-second focus/break demo mode is labelled
+on the focus screen; set `TEST_MODE` to false for normal sessions.
+
 ## Shared display completion animation
 
 The display watches `house_snapshot` round generations and celebrates a new

@@ -77,6 +77,22 @@ p {
   color: #756f67;
 }
 
+.journey-intro h1 { line-height: 1.5; color: #805e4d; }
+.journey-intro p { color: #6e6657; }
+.journey-steps { display: flex; gap: 8px; padding: 0; margin: 22px 0; list-style: none; }
+.journey-steps li { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; font-size: 12px; }
+.journey-steps b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--olive-dark); color: white; }
+.journey-steps small { display: block; font-size: 10px; color: #6e6657; margin-top: 3px; }
+.welcome-house { padding: 18px 14px; }
+.welcome-house h2 { font-size: 15px; color: #805e4d; }
+.event-room-summary { margin-top: 16px; padding: 14px; background: var(--cream); border-radius: 14px; }
+.welcome-house .shared-house { margin: 0 auto; max-width: 240px; }
+.qr-video { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 18px; background: #544c41; }
+.qr-fallback { margin-top: 22px; }
+.qr-fallback label { display: block; font-size: 12px; }
+.qr-fallback input { width: 100%; margin-top: 10px; padding: 12px; border: 1px solid var(--olive); border-radius: 8px; font: inherit; font-size: 12px; }
+button:focus-visible, input:focus-visible { outline: 3px solid #805e4d; outline-offset: 3px; }
+
 .center {
   text-align: center;
 }
