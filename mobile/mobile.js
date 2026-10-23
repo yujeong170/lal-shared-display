@@ -131,7 +131,9 @@ const TABLES = {
 const params = new URLSearchParams(window.location.search);
 function tableFromParams(searchParams) {
   const table = searchParams.get('table');
-  const room = searchParams.get('room');
+  const qrRoom = searchParams.get('room');
+  const room = qrRoom === 'living-room-1' ? 'living1' :
+    qrRoom === 'living-room-2' ? 'living2' : qrRoom;
   const roomTable = Object.keys(TABLES).find(id => TABLES[id] === room);
   if (table !== null && !TABLES[table]) return null;
   if (room !== null && !roomTable) return null;
@@ -1099,9 +1101,11 @@ function joinFromQr(value) {
   const appRoot = new URL('../', location.href);
   const isHousePage = [appRoot.pathname, appRoot.pathname + 'index.html'].includes(url.pathname) &&
     (url.origin === location.origin || url.origin === 'https://yujeong170.github.io');
+  const isPublishedHouse = url.origin === 'https://yujeong170.github.io' &&
+    ['/lal-shared-display/', '/lal-shared-display/index.html'].includes(url.pathname);
   const validProtocol = ['https:', 'http:'].includes(url.protocol) ||
     (url.protocol === 'file:' && location.protocol === 'file:');
-  if (!validProtocol || (!isMobilePage && !isCurrentPage && !isHousePage) || !table) return false;
+  if (!validProtocol || (!isMobilePage && !isCurrentPage && !isHousePage && !isPublishedHouse) || !table) return false;
   stopScanner();
   state.table = table;
   state.room = TABLES[table];
