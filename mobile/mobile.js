@@ -1206,7 +1206,7 @@ function detailPage() {
     state.occupied[room.id].length >= room.cols * room.rows;
 
   return `
-    ${backButton("rooms")}
+    ${backButton("home")}
 
     <h1 class="center">${room.name}</h1>
 
