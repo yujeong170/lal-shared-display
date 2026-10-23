@@ -499,16 +499,11 @@ function canFitShape(shape) {
   ]);
 }
 
-let previewRoomId = null;
-let roomPreviewTimeout = null;
-
 function navigate(page) {
   // Focus must be completed or ended first.
   if (state.page === "focus" && page !== "focus") return;
   stopScanner();
 
-  clearTimeout(roomPreviewTimeout);
-  previewRoomId = null;
   state.page = page;
   render();
   window.scrollTo(0, 0);
@@ -995,10 +990,6 @@ function roomsPage(houseOnly = false) {
 
     ${houseOnly ? '' : '<h1 class="center">Shared House</h1>'}
 
-    <p class="center small">
-      6 rooms, built together · Tap a room to explore
-    </p>
-
     <div class="shared-house">
       <div class="shared-house-roof" aria-hidden="true">
         <img src="../assets/house/house%20roof.PNG" alt="" />
@@ -1010,28 +1001,14 @@ function roomsPage(houseOnly = false) {
         <div class="grid-two rooms-list">
       ${["balcony", "bathroom", "bedroom", "kitchen", "living2", "living1"].map(id => {
         const room = ROOMS.find(room => room.id === id);
-        const total = room.cols * room.rows;
-        const occupied = state.occupied[room.id].length;
         return `
-        <button
+        <div
           class="house-room"
-          data-room="${room.id}"
-          aria-label="${room.name}${room.id === TABLES[state.table] ? ', your room' : ', view only preview'}"
+          role="img"
+          aria-label="${room.name}${room.id === TABLES[state.table] ? ', your room' : ''}"
         >
 ${roomPreview(room.id)}
-          <span class="house-room-overlay" ${previewRoomId === room.id ? '' : 'hidden'}>
-            <span>${room.name}<br>(View only)</span>
-            <span class="house-room-occupancy">
-              ${occupied} / ${total} cells occupied<br>
-              ${total - occupied} available
-            </span>
-            <span class="house-room-progress" role="progressbar"
-              aria-label="Occupied cells" aria-valuemin="0"
-              aria-valuemax="${total}" aria-valuenow="${occupied}">
-              <span style="width: ${(occupied / total) * 100}%"></span>
-            </span>
-          </span>
-        </button>
+        </div>
       `;
       }).join("")}
         </div>
@@ -1867,24 +1844,6 @@ app.addEventListener("click", event => {
     if (!joinFromQr(document.getElementById('qr-link').value.trim())) {
       document.getElementById('scan-status').textContent = 'Paste your table’s QR link, such as …/?room=balcony or …/mobile/mobile.html?table=01.';
     }
-    return;
-  }
-
-  // Room selection (viewing does not change joined room)
-  if (button.dataset.room) {
-    const selectedRoomId = button.dataset.room;
-    if (selectedRoomId !== joinedRoom()?.id) {
-      clearTimeout(roomPreviewTimeout);
-      previewRoomId = selectedRoomId;
-      render();
-      roomPreviewTimeout = setTimeout(() => {
-        previewRoomId = null;
-        if (state.page === "rooms" || state.page === "home") render();
-      }, 2500);
-      return;
-    }
-    state.room = selectedRoomId;
-    navigate("detail");
     return;
   }
 

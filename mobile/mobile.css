@@ -266,7 +266,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #805e4d; outline-
   background: transparent;
   color: white;
   font: inherit;
-  cursor: pointer;
+  cursor: default;
   overflow: hidden;
 }
 
