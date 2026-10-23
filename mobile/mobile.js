@@ -156,23 +156,6 @@ const saved = readSaved();
 const activeTable = joinedTable;
 const activeRoom = TABLES[activeTable] || null;
 
-function localDayKey() {
-  const date = new Date();
-  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-}
-
-function readDailyChallenge() {
-  const daily = saved.dailyChallenge;
-  if (daily?.date !== localDayKey()) {
-    return { date: localDayKey(), minutes: 0, rewarded: false };
-  }
-  return {
-    date: daily.date,
-    minutes: Number.isFinite(daily.minutes) ? Math.max(0, daily.minutes) : 0,
-    rewarded: daily.rewarded === true
-  };
-}
-
 let state = {
   page: joinedTable ? "detail" : "home",
   room: activeRoom,
@@ -191,9 +174,6 @@ let state = {
   puzzleComplete: false,
   timerMessage: null,
   earnedLastPiece: false,
-  dailyChallenge: readDailyChallenge(),
-  earnedDailyBonus: false,
-  showDailyBonus: false,
 
 occupied: Object.fromEntries(
   ROOMS.map(room => [room.id, []])
@@ -205,7 +185,6 @@ function saveProgress() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       pieces: state.pieces,
       points: state.points,
-      dailyChallenge: state.dailyChallenge,
       occupied: state.occupied
     }));
   } catch (error) {
@@ -219,27 +198,6 @@ function joinedRoom() {
   return ROOMS.find(
     room => room.id === TABLES[state.table]
   ) || null;
-}
-
-function dailyChallenge() {
-  if (state.dailyChallenge.date !== localDayKey()) {
-    state.dailyChallenge = { date: localDayKey(), minutes: 0, rewarded: false };
-    saveProgress();
-  }
-  return state.dailyChallenge;
-}
-
-function dailyChallengeCard() {
-  const daily = dailyChallenge();
-  return `
-    <div class="daily-challenge" aria-label="Daily study challenge">
-      <div>
-        <strong>Daily Challenge</strong>
-        <span>${daily.rewarded ? 'Completed! +1 point earned' : 'Study for an hour · +1 bonus point'}</span>
-      </div>
-      <span class="daily-challenge-progress">${Math.min(60, daily.minutes)}min / 60min</span>
-    </div>
-  `;
 }
 
 function currentRoom() {
@@ -420,14 +378,6 @@ function finishTimer() {
   timer.endsAt = null;
 
   if (completedMode === "study") {
-    const daily = dailyChallenge();
-    daily.minutes += timer.studyMinutes;
-    state.earnedDailyBonus = !daily.rewarded && daily.minutes >= 60;
-    if (state.earnedDailyBonus) {
-      daily.rewarded = true;
-      state.points += 1;
-      state.showDailyBonus = true;
-    }
     const earned = state.pieces < 4;
 
     if (earned) {
@@ -878,7 +828,6 @@ function homePage(studyOnly = false) {
       <span class="room-tag">${room ? 'YOUR ROOM · ' + room.name : 'FOCUS TIME'}</span>
       <h1>Focus together.<br>Build a shared home.</h1>
       <p>Start a focus session to earn a Puzzle Piece. ${room ? 'Use your Pieces to add furniture to ' + room.name + '.' : 'Join a room when you’re ready to furnish the house.'}</p>
-      <p class="small">${TEST_MODE ? 'Demo mode · Focus and break sessions last 3 seconds.' : 'Complete 15–45 minutes of focus to earn 1 Piece.'}</p>
     </div>
 
     <div class="timer-settings">
@@ -902,7 +851,6 @@ function homePage(studyOnly = false) {
       </div>
     </div>
 
-    ${dailyChallengeCard()}
 
     ${timerCircle(
       timer.mode === "break" ? "View Break" : "Start Focus",
@@ -944,7 +892,6 @@ function focusPage() {
         FOCUS MODE · Stay focused
       </p>
 
-      ${dailyChallengeCard()}
 
       ${timerCircle(
         timer.running ? "Pause" : "Resume",
@@ -974,9 +921,6 @@ function completePage() {
     <div class="card peach-card center completion-card">
       <h1>Focus Complete!</h1>
 
-      ${state.earnedDailyBonus
-        ? '<p class="daily-bonus-message">Daily Challenge complete! +1 bonus point</p>'
-        : ''}
 
       <h2>
         ${state.earnedLastPiece
@@ -1103,7 +1047,9 @@ function eventHouseCard() {
     <section class="card peach-card welcome-house" aria-label="Shared house event">
       <h2 class="center">Build our shared house</h2>
       <p class="center small">Focus together. Earn Pieces. Add furniture.</p>
-      ${roomsPage(true)}
+      <div class="event-house-stage">
+        ${roomsPage(true)}
+      </div>
       ${room ? `
         <div class="event-room-summary">
           <span class="room-tag">YOUR ROOM · ${room.name}</span>
@@ -1853,7 +1799,6 @@ function rewardsPage() {
 
 function render() {
   if (state.page === 'scan' && app.querySelector('#qr-video')) return;
-  if (state.showDailyBonus && app.querySelector(".daily-bonus-overlay")) return;
   // Keep the open confirmation dialog mounted so background updates
   // do not replay its entrance animation or interrupt button focus.
   if (
@@ -1884,26 +1829,7 @@ function render() {
 
   app.innerHTML =
     page() +
-    (state.page === "focus" ? "" : bottomNav()) +
-    (state.showDailyBonus ? `
-      <div class="contribution-overlay daily-bonus-overlay">
-        <div class="contribution-popup" role="dialog" aria-modal="true"
-          aria-labelledby="daily-bonus-title" aria-describedby="daily-bonus-description">
-          <div class="contribution-icon" aria-hidden="true">✓</div>
-          <h2 id="daily-bonus-title">Daily Challenge Complete!</h2>
-          <div class="contribution-points">+1 Bonus Point!</div>
-          <p id="daily-bonus-description">
-            You studied for 60 minutes today.<br>
-            Your bonus point has been added to your total!
-          </p>
-          ${primary("Got it!", "dismiss-daily-bonus")}
-        </div>
-      </div>
-    ` : "");
-
-  if (state.showDailyBonus) {
-    app.querySelector('[data-action="dismiss-daily-bonus"]').focus();
-  }
+    (state.page === "focus" ? "" : bottomNav());
 
   updateTimerDisplay();
 }
@@ -1919,14 +1845,6 @@ app.addEventListener("click", event => {
   if (window.isSavingPlacement) return;
   if (placementRequestId && button.dataset.action !== "confirm") {
     alert("Please retry Confirm first so we can check whether your previous placement was saved.");
-    return;
-  }
-
-  if (state.showDailyBonus) {
-    if (button.dataset.action === "dismiss-daily-bonus") {
-      state.showDailyBonus = false;
-      render();
-    }
     return;
   }
 
