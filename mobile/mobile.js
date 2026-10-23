@@ -1185,6 +1185,13 @@ function detailPage() {
     room.id === TABLES[state.table];
   const roomIsFull =
     state.occupied[room.id].length >= room.cols * room.rows;
+  const focusAction = `<button class="primary" data-page="study">Start Focus →</button>
+    <p class="small center">${state.pieces > 0 ? 'You have ' + state.pieces + ' Piece(s). You can also try furnishing now.' : 'Complete a focus session to earn 1 Puzzle Piece.'}</p>`;
+  const contributeAction = primary(
+    "Contribute to Room →",
+    "start-contribution",
+    state.pieces === 0 || roomIsFull
+  );
 
   return `
     ${backButton("home")}
@@ -1209,21 +1216,17 @@ function detailPage() {
       ${roomProgress(room)}
     </div>
 
-    ${isMyRoom ? `<button class="primary" data-page="study">Start Focus →</button>
-      <p class="small center">${state.pieces ? 'You have ' + state.pieces + ' Piece(s). You can also try furnishing now.' : 'Complete a focus session to earn 1 Puzzle Piece.'}</p>` : ''}
-
     ${isMyRoom
-      ? primary(
-          "Contribute to Room →",
-          "start-contribution",
-          state.pieces === 0 || roomIsFull
-        )
+      ? (state.pieces > 0
+          ? contributeAction + focusAction
+          : focusAction + contributeAction)
       : `
         <div class="notice">
           You can explore this room, but you can only
           contribute to the room linked to your table.
         </div>
       `}
+
   `;
 }
 
