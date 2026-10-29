@@ -520,6 +520,30 @@ const roomQRImages = {
     top: 0
   },
 
+  kitchen: {
+    file: "kitchen-QR.png",
+    position: "right",
+    width: 180,
+    bottom: 5,
+    right: 5
+  },
+
+  bedroom: {
+    file: "bedroom-QR.png",
+    position: "right",
+    width: 180,
+    bottom: 5,
+    right: 5
+  },
+
+  "living-room-2": {
+    file: "living room 2-QR.png",
+    position: "right",
+    width: 180,
+    bottom: 5,
+    right: 5
+  },
+
   "living-room-1": {
     file: "living room 1-QR.png",
     position: "right",
